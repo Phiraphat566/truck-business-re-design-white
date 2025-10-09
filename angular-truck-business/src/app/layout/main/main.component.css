@@ -1,0 +1,138 @@
+/* Enhanced Professional Styling - Blue Theme */
+a.router-link-active {
+  font-weight: bold;
+  color: #3b82f6;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #4b5563;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.nav-item:hover {
+  color: #3b82f6;
+}
+
+.active-link {
+  color: #1d4ed8;
+  font-weight: 600;
+  position: relative;
+}
+
+.active-link::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 1rem;
+  width: 0.25rem;
+  background-color: #2563eb;
+  border-radius: 0 0.25rem 0.25rem 0;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  color: #4b5563;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  position: relative;
+  border: 1px solid transparent;
+}
+
+.nav-link:hover {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-color: #93c5fd;
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.nav-link.active-link {
+  color: #1d4ed8;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-color: #60a5fa;
+  box-shadow: 0 4px 16px rgba(29, 78, 216, 0.2);
+}
+
+.nav-link i {
+  transition: all 0.3s ease;
+}
+
+.nav-link:hover i {
+  transform: scale(1.1);
+  color: #3b82f6;
+}
+
+.nav-link.active-link i {
+  color: #1d4ed8;
+  transform: scale(1.05);
+}
+
+.indicator {
+  width: 4px;
+  height: 1.5rem;
+  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+  border-radius: 9999px;
+  margin-right: -0.5rem;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+}
+
+/* Sidebar Enhancement - Blue Theme */
+.enhanced-sidebar {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border-right: 1px solid #cbd5e1;
+  box-shadow: 0 25px 50px rgba(59, 130, 246, 0.1);
+}
+
+/* Profile Section Enhancement - Blue Theme */
+.profile-section {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  border: 1px solid #93c5fd;
+  transition: all 0.3s ease;
+}
+
+.profile-section:hover {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
+}
+
+.profile-img {
+  transition: all 0.3s ease;
+  border: 3px solid #60a5fa;
+  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.2);
+}
+
+.profile-img:hover {
+  transform: scale(1.05);
+  box-shadow: 0 12px 40px rgba(59, 130, 246, 0.25);
+  border-color: #3b82f6;
+}
+
+
+
+/* Logout Button Enhancement - Blue Theme */
+.logout-btn {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+  border: 1px solid #93c5fd !important;
+  color: #1d4ed8 !important;
+  transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+  color: #1e40af !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.2);
+}

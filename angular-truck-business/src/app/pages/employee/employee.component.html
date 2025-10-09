@@ -1,0 +1,738 @@
+<div class="min-h-screen bg-white text-gray-900">
+  <!-- HEADER -->
+  <header class="bg-white shadow-sm border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 py-6">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">
+            {{ view==='main' ? 'จัดการทีมงานรับเหมา' : 'ประวัติการเรียกพนักงาน' }}
+          </h1>
+          <p class="text-gray-600 text-sm" *ngIf="view==='main'">ดูโปรไฟล์/ไซต์งาน/เอกสารความปลอดภัย</p>
+          <p class="text-gray-600 text-sm" *ngIf="view==='history'">แสดงประวัติทั้งหมด (10 รายการต่อหน้า)</p>
+        </div>
+
+        <div class="flex items-center gap-3 flex-wrap">
+          <!-- ปุ่มสลับหน้า -->
+          <button *ngIf="view==='main'"
+                  (click)="goHistory()"
+                  class="px-3 py-2 rounded-lg font-semibold border border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
+            ประวัติการเรียก
+          </button>
+          <button *ngIf="view==='history'"
+                  (click)="backToMain()"
+                  class="px-3 py-2 rounded-lg font-semibold border border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
+            ← กลับไปหน้าพนักงาน
+          </button>
+          <!-- ลบสวิตช์ธีมออกแล้ว -->
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <!-- ===================== VIEW: MAIN ===================== -->
+    <ng-container *ngIf="view==='main'">
+      <!-- แถวค้นหา/ปุ่มหลัก -->
+      <div class="flex flex-wrap md:flex-nowrap items-center justify-between gap-3 w-full mb-6">
+        <div class="relative flex-1 min-w-[260px]">
+          <input
+            type="text"
+            [(ngModel)]="searchTerm"
+            placeholder="ค้นหาชื่อหรือรหัสพนักงาน..."
+            class="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2.5 pl-10 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+          <svg class="absolute left-3 top-3.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+        </div>
+
+        <div class="flex items-center gap-3 shrink-0">
+          <button type="button" (click)="openAssignModal()"
+                  class="bg-indigo-600 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-indigo-700 transition shadow-md">
+            มอบหมายงาน
+          </button>
+          <button type="button" (click)="openAttModal()"
+                  class="bg-indigo-50 text-indigo-700 px-4 py-2.5 rounded-lg font-medium border border-indigo-200 hover:bg-indigo-100 transition">
+            บันทึกเข้า/ออก/ลา
+          </button>
+          <button type="button" (click)="openAddPopup()"
+                  class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-5 py-2.5 rounded-lg font-medium hover:from-indigo-600 hover:to-purple-700 transition-all shadow-md">
+            เพิ่มพนักงาน
+          </button>
+          <button type="button" (click)="editingMode = !editingMode" [attr.aria-pressed]="editingMode"
+                  class="px-4 py-2.5 rounded-lg font-medium border transition"
+                  [ngClass]="editingMode ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'">
+            {{ editingMode ? 'ออกจากโหมดแก้ไข' : 'โหมดแก้ไข' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- สรุป -->
+      <section class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div class="bg-white rounded-none shadow-sm hover:shadow-md border border-gray-200 p-5">
+          <div class="text-sm text-gray-600 mb-1">พนักงานทั้งหมด</div>
+          <div class="text-3xl font-bold">{{ totalEmployees }}</div>
+        </div>
+        <div class="bg-white rounded-none shadow-sm hover:shadow-md border border-gray-200 p-5">
+          <div class="flex items-center justify-between mb-1">
+            <div class="text-sm text-gray-600">ทำงานอยู่</div>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">ทำงานอยู่</span>
+          </div>
+          <div class="text-3xl font-bold">{{ workingCount }}</div>
+        </div>
+        <div class="bg-white rounded-none shadow-sm hover:shadow-md border border-gray-200 p-5">
+          <div class="text-sm text-gray-600 mb-1">ลาพัก</div>
+          <div class="text-3xl font-bold">{{ leaveCount }}</div>
+        </div>
+      </section>
+
+      <!-- ตารางพนักงาน -->
+      <section class="bg-white rounded-none shadow-sm border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-900">รายชื่อพนักงาน</h2>
+            <span class="text-sm text-gray-600">{{ filteredEmployees.length }} คน</span>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+              <tr>
+                <th class="px-6 py-4 text-left text-[11px] font-semibold text-gray-700 uppercase tracking-wider">พนักงาน</th>
+                <th class="px-6 py-4 text-left text-[11px] font-semibold text-gray-700 uppercase tracking-wider">รหัส</th>
+                <th class="px-6 py-4 text-left text-[11px] font-semibold text-gray-700 uppercase tracking-wider">สถานะวันนี้</th>
+                <th class="px-6 py-4 text-left text-[11px] font-semibold text-gray-700 uppercase tracking-wider">งานวันนี้</th>
+                <th class="px-6 py-4 text-left text-[11px] font-semibold text-gray-700 uppercase tracking-wider">ตำแหน่ง</th>
+                <th class="px-6 py-4 text-left text-[11px] font-semibold text-gray-700 uppercase tracking-wider">ติดต่อ</th>
+                <th *ngIf="editingMode" class="px-6 py-4 text-center text-[11px] font-semibold text-gray-700 uppercase tracking-wider">จัดการ</th>
+              </tr>
+            </thead>
+
+            <tbody class="divide-y divide-gray-200">
+              <tr *ngFor="let emp of filteredEmployees; let i = index"
+                  class="hover:bg-gray-50 cursor-pointer transition-colors duration-150"
+                  (click)="showDetail(emp)">
+                <!-- รูป/ชื่อ -->
+                <td class="px-6 py-4">
+                  <div class="flex items-center space-x-4">
+                    <div class="relative">
+                      <img [src]="emp.imageUrl || 'assets/placeholder.png'" alt="photo"
+                           class="w-12 h-12 rounded-full object-cover border-2 border-gray-200" />
+                      <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-white"
+                           [ngClass]="statusDotClass(emp.status)" [title]="statusLabel(emp.status)"></div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-semibold text-gray-900">
+                        {{ emp.firstName }} {{ emp.lastName }}
+                      </p>
+                      <p class="text-sm text-gray-500 truncate">
+                        {{ emp.email || 'ไม่มีอีเมล' }}
+                      </p>
+                    </div>
+                  </div>
+                </td>
+
+                <td class="px-6 py-4">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {{ emp.id || ('ED00' + (i + 1)) }}
+                  </span>
+                </td>
+
+                <td class="px-6 py-4">
+                  <span class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-medium"
+                        [ngClass]="{
+                          'bg-emerald-50 text-emerald-700': emp.status==='WORKING',
+                          'bg-amber-50 text-amber-700'  : emp.status==='ON_LEAVE',
+                          'bg-rose-50 text-rose-700'    : emp.status==='OFF_DUTY',
+                          'bg-sky-50 text-sky-700'      : emp.status==='NOT_CHECKED_IN',
+                          'bg-slate-100 text-slate-700' : emp.status==='ABSENT' || !emp.status
+                        }">
+                    <span class="w-2.5 h-2.5 rounded-full" [ngClass]="statusDotClass(emp.status)"></span>
+                    {{ statusLabel(emp.status) }}
+                  </span>
+                </td>
+
+                <td class="px-6 py-4">
+                  <ng-container *ngIf="emp.todayJob; else nojob">
+                    <button type="button"
+                            class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition"
+                            (click)="openJobModal(emp.todayJob!); $event.stopPropagation()">
+                      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 7h16v13H4z"></path>
+                        <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"></path>
+                      </svg>
+                      <span class="max-w-[220px] truncate">งาน</span>
+                      <span *ngIf="emp.todayJob?.accepted_at"
+                            class="ml-1 px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">รับแล้ว</span>
+                    </button>
+                  </ng-container>
+                  <ng-template #nojob><span class="text-xs text-slate-400">—</span></ng-template>
+                </td>
+
+                <td class="px-6 py-4"><span class="text-sm text-gray-900">{{ emp.position }}</span></td>
+                <td class="px-6 py-4"><span class="text-sm text-gray-900">{{ emp.phone || 'ไม่มีเบอร์โทร' }}</span></td>
+
+                <td *ngIf="editingMode" class="px-6 py-4">
+                  <div class="flex items-center justify-center space-x-2">
+                    <button type="button" (click)="openEditPopupFor(i); $event.stopPropagation()"
+                            class="w-8 h-8 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg flex items-center justify-center transition-colors">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                      </svg>
+                    </button>
+                    <button type="button" (click)="confirmDelete(i); $event.stopPropagation()"
+                            class="w-8 h-8 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg flex items-center justify-center transition-colors">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr *ngIf="filteredEmployees.length === 0">
+                <td [attr.colspan]="editingMode ? 7 : 6" class="px-6 py-16 text-center">
+                  <div class="flex flex-col items-center justify-center">
+                    <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0zM7 10a2 2 0 11-4 0 2 2 0z"></path>
+                    </svg>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">ไม่พบข้อมูลพนักงาน</h3>
+                    <p class="text-gray-500 mb-4">
+                      {{ searchTerm ? 'ลองค้นหาด้วยคำค้นอื่นหรือเพิ่มพนักงานใหม่' : 'เริ่มต้นโดยการเพิ่มพนักงานคนแรก' }}
+                    </p>
+                    <button type="button" (click)="openAddPopup()"
+                            class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+                      <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                      </svg>
+                      เพิ่มพนักงาน
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </ng-container>
+
+    <!-- ===================== VIEW: HISTORY ===================== -->
+    <ng-container *ngIf="view==='history'">
+      <section class="rounded-none shadow-sm border border-gray-200 p-6 bg-white">
+        <!-- ตัวกรอง -->
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+          <h2 class="text-xl font-semibold text-gray-900">ประวัติทั้งหมด</h2>
+          <div class="flex items-center gap-2">
+            <select [(ngModel)]="historyFilter.employeeId" (ngModelChange)="onHistoryFilterChange()"
+                    class="bg-gray-50 text-gray-900 border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              <option value="">พนักงานทั้งหมด</option>
+              <option *ngFor="let e of employees" [value]="e.id">
+                {{ e.firstName }} {{ e.lastName }} ({{ e.id }})
+              </option>
+            </select>
+            <input [(ngModel)]="historyFilter.q" (ngModelChange)="onHistoryFilterChange()" placeholder="ค้นหาข้อความ"
+                   class="bg-gray-50 text-gray-900 border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+          </div>
+        </div>
+
+        <!-- ตาราง -->
+        <div class="overflow-x-auto rounded-none border border-gray-200">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 text-gray-800 border-b border-gray-200">
+              <tr class="text-left">
+                <th class="px-4 py-3 font-semibold">วันที่</th>
+                <th class="px-4 py-3 font-semibold">พนักงาน</th>
+                <th class="px-4 py-3 font-semibold">ข้อความ</th>
+                <th class="px-4 py-3 w-32 font-semibold">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <tr *ngFor="let c of calls; trackBy: trackCall">
+                <td class="align-top px-4 py-3 whitespace-nowrap">{{ c.call_date | date:'yyyy-MM-dd' }}</td>
+                <td class="align-top px-4 py-3 whitespace-nowrap">
+                  {{ c.Employee?.name || empName(c.employee_id) || c.employee_id }}
+                </td>
+                <td class="px-4 py-3"><div class="text-[13px] whitespace-pre-wrap leading-5">{{ c.message }}</div></td>
+                <td class="align-top px-4 py-3">
+                  <ng-container *ngIf="editId!==c.id; else editRow">
+                    <div class="flex gap-2">
+                      <button (click)="startEdit(c)" class="px-2 py-1 rounded bg-blue-600 text-white text-xs">แก้ไข</button>
+                      <button (click)="removeCall(c)" class="px-2 py-1 rounded bg-rose-600 text-white text-xs">ลบ</button>
+                    </div>
+                  </ng-container>
+                  <ng-template #editRow>
+                    <div class="grid grid-cols-1 gap-2">
+                      <input [(ngModel)]="editBuf.employeeId" placeholder="EMP001"
+                             class="rounded-lg border border-gray-300 px-2 py-1 bg-white text-xs" />
+                      <input [(ngModel)]="editBuf.callDate" type="date"
+                             class="rounded-lg border border-gray-300 px-2 py-1 bg-white text-xs" />
+                      <input [(ngModel)]="editBuf.message"
+                             class="rounded-lg border border-gray-300 px-2 py-1 bg-white text-xs" />
+                      <div class="flex gap-2">
+                        <button (click)="saveEdit(c)" class="px-2 py-1 rounded bg-emerald-600 text-white text-xs">บันทึก</button>
+                        <button (click)="cancelEdit()" class="px-2 py-1 rounded border text-xs">ยกเลิก</button>
+                      </div>
+                    </div>
+                  </ng-template>
+                </td>
+              </tr>
+
+              <tr *ngIf="!loadingCalls && calls.length===0">
+                <td colspan="4" class="px-4 py-10 text-center text-gray-500">ไม่พบข้อมูล</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div *ngIf="loadingCalls" class="text-sm text-gray-500 mt-4">กำลังโหลด...</div>
+
+        <!-- แบ่งหน้า -->
+        <div class="flex items-center justify-between mt-4">
+          <div class="text-sm text-gray-700">
+            หน้า {{ page }} <span *ngIf="totalKnown">/ {{ totalPages }}</span>
+            <span *ngIf="totalKnown">• รวม {{ total | number }}</span>
+          </div>
+          <div class="flex gap-2">
+            <button (click)="prevPage()" [disabled]="page===1"
+                    class="px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50">ก่อนหน้า</button>
+            <button (click)="nextPage()" [disabled]="!hasNext"
+                    class="px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50">ถัดไป</button>
+          </div>
+        </div>
+      </section>
+    </ng-container>
+  </div>
+
+  <!-- ========= OVERLAYS / MODALS ========= -->
+
+  <!-- Delete Confirm -->
+  <div *ngIf="showDeleteConfirm && deleteIndex !== null" class="fixed inset-0 bg-black/50 flex justify-center items-center z-50 backdrop-blur-sm">
+    <div class="bg-white rounded-none border border-gray-200 shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+      <div class="p-6">
+        <div class="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
+          <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path></svg>
+        </div>
+        <h2 class="text-xl font-semibold text-center text-gray-900 mb-2">ยืนยันการลบพนักงาน</h2>
+        <p class="text-center text-gray-600 mb-6">
+          คุณต้องการลบพนักงาน
+          <span class="font-semibold text-gray-900">{{ employees[deleteIndex]?.firstName || '' }} {{ employees[deleteIndex]?.lastName || '' }}</span>
+          ใช่หรือไม่?
+        </p>
+        <div class="flex space-x-3">
+          <button type="button" (click)="showDeleteConfirm = false" [disabled]="isLoading"
+                  class="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors disabled:opacity-50">ยกเลิก</button>
+          <button type="button" (click)="deleteEmployee(deleteIndex!)" [disabled]="isLoading"
+                  class="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center">
+            <svg *ngIf="isLoading" class="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            {{ isLoading ? 'กำลังลบ...' : 'ลบพนักงาน' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div *ngIf="showToast" class="fixed top-6 right-6 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg z-[100] flex items-center space-x-3">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+    <span class="font-medium">{{ toastMessage }}</span>
+  </div>
+
+  <!-- Add/Edit Employee Modal -->
+  <div *ngIf="showPopup" class="fixed inset-0 bg-black/50 flex justify-center items-center z-50 backdrop-blur-sm">
+    <div class="bg-white rounded-none border border-gray-200 shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+      <div class="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-4">
+        <h2 class="text-xl font-semibold text-white">{{ editingMode ? 'แก้ไขข้อมูลพนักงาน' : 'เพิ่มพนักงานใหม่' }}</h2>
+        <p class="text-indigo-100 text-sm mt-1">กรอกข้อมูลพนักงานให้ครบถ้วน</p>
+      </div>
+      <form (ngSubmit)="submitForm()" class="p-6 space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">ชื่อ</label>
+            <input [(ngModel)]="form.firstName" name="firstName" placeholder="ชื่อจริง"
+                   class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors" required />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">นามสกุล</label>
+            <input [(ngModel)]="form.lastName" name="lastName" placeholder="นามสกุล"
+                   class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors" required />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">ตำแหน่งงาน</label>
+          <select [(ngModel)]="form.position" name="position"
+                  class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
+            <option value="">เลือกตำแหน่ง</option>
+            <option value="คนขับรถสิบล้อ">คนขับรถสิบล้อ</option>
+            <option value="พนักงานออฟฟิส">พนักงานออฟฟิส</option>
+            <option value="หัวหน้างาน">หัวหน้างาน</option>
+            <option value="ช่างซ่อม">ช่างซ่อม</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">อีเมล</label>
+            <input [(ngModel)]="form.email" name="email" type="email" placeholder="example@company.com"
+                   class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">เบอร์โทรศัพท์</label>
+            <input [(ngModel)]="form.phone" name="phone" placeholder="081-234-5678"
+                   class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">อัปโหลดรูปภาพ</label>
+          <div class="flex items-center gap-3">
+            <input type="file" accept="image/*" (change)="onFileSelected($event)"
+                   class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"/>
+            <button type="button" *ngIf="selectedFile" (click)="clearSelectedFile()"
+                    class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm">ล้าง</button>
+          </div>
+          <div class="mt-3 flex items-center gap-3" *ngIf="imagePreview || form.imageUrl">
+            <img [src]="imagePreview || form.imageUrl" alt="preview" class="w-16 h-16 rounded-full object-cover border"/>
+            <span class="text-xs text-gray-500">รองรับ JPG/PNG ขนาดไม่เกิน 5MB</span>
+          </div>
+        </div>
+
+        <div class="flex space-x-3 pt-4">
+          <button type="button" (click)="closePopup()" [disabled]="isLoading"
+                  class="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors disabled:opacity-50">
+            ยกเลิก
+          </button>
+          <button type="submit" [disabled]="isLoading"
+                  class="flex-1 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-medium rounded-lg transition-all duration-200 disabled:opacity-50 flex items-center justify-center">
+            <svg *ngIf="isLoading" class="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            {{ isLoading ? 'กำลังบันทึก...' : (editingMode ? 'บันทึกการแก้ไข' : 'เพิ่มพนักงาน') }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Detail Modal -->
+  <div *ngIf="showDetailPopup" class="fixed inset-0 bg-black/50 flex justify-center items-center z-50 backdrop-blur-sm">
+    <div class="bg-white rounded-none border border-gray-200 shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+      <div class="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-8 text-center">
+        <div class="relative inline-block">
+          <img [src]="selectedEmployee?.imageUrl || 'assets/placeholder.png'" alt="photo"
+               class="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg mx-auto" />
+          <div class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-4 border-white"
+               [ngClass]="statusDotClass(selectedEmployee?.status)" [title]="statusLabel(selectedEmployee?.status)"></div>
+        </div>
+        <h2 class="text-2xl font-bold text-white mt-4">
+          {{ selectedEmployee?.firstName }} {{ selectedEmployee?.lastName }}
+        </h2>
+        <p class="text-indigo-100 mt-1">{{ selectedEmployee?.position }}</p>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <div class="grid grid-cols-1 gap-4">
+          <!-- รหัส -->
+          <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V4a2 2 0 012-2h2a2 2 0 012 2v2m-4 0a2 2 0 01-2 2H9a2 2 0 01-2-2"></path>
+              </svg>
+            </div>
+            <div class="flex-1">
+              <p class="text-sm font-medium text-gray-600">รหัสพนักงาน</p>
+              <p class="text-gray-900 font-semibold">{{ selectedEmployee?.id || 'ไม่ระบุ' }}</p>
+            </div>
+          </div>
+
+          <!-- อีเมล -->
+          <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+            <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+              <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+              </svg>
+            </div>
+            <div class="flex-1">
+              <p class="text-sm font-medium text-gray-600">อีเมล</p>
+              <p class="text-gray-900 font-semibold">{{ selectedEmployee?.email || 'ไม่มีข้อมูล' }}</p>
+            </div>
+          </div>
+
+          <!-- เบอร์ -->
+          <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+            <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+              </svg>
+            </div>
+            <div class="flex-1">
+              <p class="text-sm font-medium text-gray-600">เบอร์โทรศัพท์</p>
+              <p class="text-gray-900 font-semibold">{{ selectedEmployee?.phone || 'ไม่มีข้อมูล' }}</p>
+            </div>
+          </div>
+
+          <!-- สถานะ -->
+          <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center"
+                 [ngClass]="{
+                   'bg-emerald-100 text-emerald-700': selectedEmployee?.status === 'WORKING',
+                   'bg-amber-100   text-amber-700' : selectedEmployee?.status === 'ON_LEAVE',
+                   'bg-rose-100    text-rose-700'  : selectedEmployee?.status === 'OFF_DUTY',
+                   'bg-sky-100     text-sky-700'   : selectedEmployee?.status === 'NOT_CHECKED_IN',
+                   'bg-slate-100   text-slate-700' : selectedEmployee?.status === 'ABSENT'
+                 }">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 3"></path>
+              </svg>
+            </div>
+            <div class="flex-1">
+              <p class="text-sm font-medium text-gray-600">สถานะวันนี้</p>
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full" [ngClass]="statusDotClass(selectedEmployee?.status)"></span>
+                <p class="text-gray-900 font-semibold">{{ statusLabel(selectedEmployee?.status) }}</p>
+              </div>
+              <div class="text-xs text-gray-500 mt-2" *ngIf="selectedEmployee?.todayJob as tj">
+                วันนี้: {{ tj.job_description || '-' }}
+                <button class="ml-2 text-indigo-600 hover:underline" (click)="openJobModal(tj)">รายละเอียด</button>
+                <span *ngIf="tj.accepted_at" class="ml-2 text-emerald-600">(รับแล้ว)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex space-x-3 pt-4">
+          <button type="button" (click)="closeDetailPopup()"
+                  class="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors">
+            ปิด
+          </button>
+          <button type="button" (click)="editSelectedEmployee()"
+                  class="flex-1 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-medium rounded-lg transition-all duration-200">
+            แก้ไขข้อมูล
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attendance / Leave Modal -->
+  <div *ngIf="showAtt" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] backdrop-blur-sm">
+    <div class="bg-white text-gray-900 rounded-none border border-gray-200 shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+      <div class="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-4">
+        <h2 class="text-xl font-semibold text-white">บันทึกเข้างาน / ออกงาน / ลางาน</h2>
+        <p class="text-indigo-100 text-sm mt-1">เลือกโหมดการบันทึก แล้วกรอกข้อมูล</p>
+      </div>
+
+      <form (ngSubmit)="submitAtt()" class="p-6 space-y-5">
+        <!-- โหมด -->
+        <div class="grid grid-cols-4 gap-2">
+          <label class="flex items-center gap-2 p-2 rounded-lg border cursor-pointer bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                 [ngClass]="att.mode==='IN' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : ''">
+            <input type="radio" [(ngModel)]="att.mode" name="mode" value="IN" class="accent-indigo-600" />
+            <span>เข้างาน</span>
+          </label>
+          <label class="flex items-center gap-2 p-2 rounded-lg border cursor-pointer bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                 [ngClass]="att.mode==='OUT' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : ''">
+            <input type="radio" [(ngModel)]="att.mode" name="mode" value="OUT" class="accent-indigo-600" />
+            <span>ออกงาน</span>
+          </label>
+          <label class="flex items-center gap-2 p-2 rounded-lg border cursor-pointer bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                 [ngClass]="att.mode==='LEAVE' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : ''">
+            <input type="radio" [(ngModel)]="att.mode" name="mode" value="LEAVE" class="accent-indigo-600" />
+            <span>ลางาน</span>
+          </label>
+          <label class="flex items-center gap-2 p-2 rounded-lg border cursor-pointer bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                 [ngClass]="att.mode==='ABSENT' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : ''">
+            <input type="radio" [(ngModel)]="att.mode" name="mode" value="ABSENT" class="accent-indigo-600" />
+            <span>ขาดงาน</span>
+          </label>
+        </div>
+
+        <!-- พนักงาน -->
+        <div>
+          <label class="block text-sm font-medium mb-2 text-gray-700">พนักงาน</label>
+          <select class="w-full rounded-lg px-3 py-2 border bg-white border-gray-300 text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  [(ngModel)]="att.employeeId" name="employeeId" required>
+            <option [ngValue]="null">-- เลือกพนักงาน --</option>
+            <option *ngFor="let e of employees" [value]="e.id">{{ e.id }} - {{ e.firstName }} {{ e.lastName }}</option>
+          </select>
+        </div>
+
+        <!-- วันที่/เวลา -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium mb-2 text-gray-700">วันที่</label>
+            <input type="date" class="w-full rounded-lg px-3 py-2 border bg-white border-gray-300 text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                   [(ngModel)]="att.date" name="date" required />
+          </div>
+          <div *ngIf="att.mode!=='LEAVE' && att.mode!=='ABSENT'">
+            <label class="block text-sm font-medium mb-2 text-gray-700">เวลา</label>
+            <input type="time" class="w-full rounded-lg px-3 py-2 border bg-white border-gray-300 text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                   [(ngModel)]="att.time" name="time" required />
+          </div>
+        </div>
+
+        <div *ngIf="att.mode==='IN'">
+          <label class="block text-sm font-medium mb-2 text-gray-700">สถานะการมา</label>
+          <select class="w-full rounded-lg px-3 py-2 border bg-white border-gray-300 text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  [(ngModel)]="att.arrival" name="arrival" required>
+            <option value="ON_TIME">ตรงเวลา</option>
+            <option value="LATE">มาสาย</option>
+          </select>
+        </div>
+
+        <div *ngIf="att.mode==='LEAVE'" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium mb-2 text-gray-700">ประเภทการลา</label>
+            <select class="w-full rounded-lg px-3 py-2 border bg-white border-gray-300 text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    [(ngModel)]="att.leave_type" name="leave_type" required>
+              <option value="SICK">ลาป่วย</option>
+              <option value="PERSONAL">ลากิจ</option>
+              <option value="VACATION">ลาพักร้อน</option>
+              <option value="OTHER">อื่น ๆ</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2 text-gray-700">เหตุผล (ถ้ามี)</label>
+            <input class="w-full rounded-lg px-3 py-2 border bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                   [(ngModel)]="att.reason" name="reason" placeholder="ระบุเหตุผล" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2 text-gray-700">ผู้อนุมัติ (staff id)</label>
+            <input type="number" class="w-full rounded-lg px-3 py-2 border bg-white border-gray-300 text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                   [(ngModel)]="att.approved_by" name="approved_by" required />
+          </div>
+        </div>
+
+        <div *ngIf="att.mode==='ABSENT'">
+          <label class="block text-sm font-medium mb-2 text-gray-700">หมายเหตุ (ถ้ามี)</label>
+          <input class="w-full rounded-lg px-3 py-2 border bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                 [(ngModel)]="att.absent_note" name="absent_note" placeholder="เช่น ไม่ติดต่อ / ติดธุระส่วนตัว" />
+        </div>
+
+        <div class="flex gap-3 pt-2">
+          <button type="button" (click)="closeAttModal()"
+                  class="flex-1 px-4 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800">ยกเลิก</button>
+          <button type="submit" [disabled]="isLoading"
+                  class="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">
+            {{ isLoading ? 'กำลังบันทึก...' : 'บันทึก' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal มอบหมายงาน -->
+  <div *ngIf="showAssign" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[120]">
+    <div class="bg-white rounded-none border border-gray-200 shadow-2xl w-full max-w-2xl mx-4 overflow-hidden">
+      <div class="px-6 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
+        <h3 class="text-lg font-semibold">มอบหมายงาน</h3>
+      </div>
+
+      <form (ngSubmit)="submitAssign()" class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="md:col-span-2">
+            <label class="block text-xs text-gray-500 mb-1">หัวข้องาน *</label>
+            <input [(ngModel)]="assign.title" name="assignTitle" type="text"
+                   class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white text-gray-900"
+                   placeholder="เช่น ไปวิ่งงานที่บ่อทราย" required>
+          </div>
+
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">พนักงาน *</label>
+            <select [(ngModel)]="assign.employeeId" name="assignEmp"
+                    class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white text-gray-900" required>
+              <option [ngValue]="null">— เลือกพนักงาน —</option>
+              <option *ngFor="let e of employees" [value]="e.id">{{ e.id }} - {{ e.firstName }} {{ e.lastName }}</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">วัน (ว/ด/ป) *</label>
+            <input [(ngModel)]="assign.date" name="assignDate" type="date"
+                   class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white text-gray-900" required>
+          </div>
+
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">เวลา *</label>
+            <input [(ngModel)]="assign.time" name="assignTime" type="time"
+                   class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white text-gray-900" required>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="block text-xs text-gray-500 mb-1">สถานที่ *</label>
+            <input [(ngModel)]="assign.where" name="assignWhere" type="text"
+                   class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white text-gray-900"
+                   placeholder="เช่น บ่อ 2 / ซอย A" required>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="block text-xs text-gray-500 mb-1">รายละเอียดเพิ่มเติม (ไม่บังคับ)</label>
+            <textarea [(ngModel)]="assign.note" name="assignNote" rows="3"
+                      class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white text-gray-900"
+                      placeholder="เช่น ขนให้เสร็จภายใน ..."></textarea>
+          </div>
+        </div>
+
+        <div class="flex gap-2 mt-5">
+          <button type="button" class="flex-1 px-3 py-2 rounded-lg bg-gray-100" (click)="closeAssignModal()">ยกเลิก</button>
+          <button type="submit" [disabled]="isLoading"
+                  class="flex-1 px-3 py-2 rounded-lg bg-indigo-600 text-white">
+            {{ isLoading ? 'กำลังบันทึก...' : 'บันทึก' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal รายละเอียดงาน -->
+  <div *ngIf="showJobModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[120]">
+    <div class="bg-white rounded-none border border-gray-200 shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+      <div class="px-6 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
+        <h3 class="text-lg font-semibold">รายละเอียดงาน</h3>
+      </div>
+      <div class="p-6 space-y-3 text-sm">
+        <div class="flex items-center justify-between">
+          <div>วันที่มอบหมาย</div>
+          <div class="font-semibold">{{ jobModal?.assigned_date | date:'yyyy-MM-dd' }}</div>
+        </div>
+        <div class="flex items-center justify-between">
+          <div>สถานะ</div>
+          <div>
+            <span class="px-2 py-0.5 rounded-full text-xs"
+                  [ngClass]="jobModal?.accepted_at ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'">
+              {{ jobModal?.accepted_at ? 'รับแล้ว' : 'ยังไม่รับ' }}
+            </span>
+          </div>
+        </div>
+        <div>
+          <div class="mb-1">รายละเอียด</div>
+          <pre class="whitespace-pre-wrap bg-gray-50 p-3 rounded-lg">{{ jobModal?.job_description }}</pre>
+        </div>
+        <div class="text-xs text-gray-500">ที่มา: {{ jobModal?.source || '-' }}</div>
+      </div>
+      <div class="px-6 pb-6 flex gap-2">
+        <button *ngIf="jobModal && !jobModal.accepted_at" (click)="acceptJob(jobModal!.id)"
+                class="px-3 py-2 rounded-lg bg-emerald-600 text-white">ตั้งเป็นรับงาน</button>
+        <button *ngIf="jobModal" (click)="deleteAssignment(jobModal!.id)"
+                class="px-3 py-2 rounded-lg bg-red-100 text-red-700">ลบงานนี้</button>
+        <button *ngIf="jobModal && jobModal.accepted_at && !jobModal.completed_at" (click)="completeJob(jobModal!.id)"
+                class="px-3 py-2 rounded-lg bg-emerald-600 text-white">ปิดงาน</button>
+        <button *ngIf="jobModal?.completed_at" (click)="reopenJob(jobModal!.id)"
+                class="px-3 py-2 rounded-lg bg-amber-100 text-amber-700">ย้อนสถานะ</button>
+        <button (click)="closeJobModal()" class="ml-auto px-3 py-2 rounded-lg bg-gray-100">ปิด</button>
+      </div>
+    </div>
+  </div>
+</div>

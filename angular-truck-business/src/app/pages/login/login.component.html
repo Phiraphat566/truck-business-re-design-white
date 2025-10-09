@@ -1,0 +1,119 @@
+<!-- พื้นหลังเต็มจอ: ไล่เฉด + ลายวงกลม -->
+<div class="min-h-screen relative overflow-hidden bg-gradient-to-br from-[#0f172a] via-[#101a30] to-[#18233d]">
+  <div class="pointer-events-none absolute -top-32 -left-32 w-96 h-96 rounded-full opacity-20 blur-3xl bg-indigo-500"></div>
+  <div class="pointer-events-none absolute -bottom-40 -right-24 w-[32rem] h-[32rem] rounded-full opacity-20 blur-3xl bg-blue-400"></div>
+
+  <!-- กล่องล็อกอิน -->
+  <div class="relative z-10 grid place-items-center px-4 py-10">
+    <main class="w-full max-w-xl rounded-2xl bg-white/90 backdrop-blur-md shadow-[0_20px_60px_rgba(0,0,0,0.35)] ring-1 ring-white/40">
+      <!-- หัวการ์ด -->
+      <div class="px-8 pt-10 pb-6 text-center">
+        <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-white font-bold">
+          TB
+        </div>
+        <h1 class="text-2xl font-bold text-slate-900">เข้าสู่ระบบ</h1>
+        <p class="mt-1 text-sm text-slate-500">กรอกชื่อผู้ใช้และรหัสผ่านเพื่อเข้าใช้งานระบบ</p>
+      </div>
+
+      <!-- แจ้ง error -->
+      <div *ngIf="error" class="mx-8 mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        {{ error }}
+      </div>
+
+      <!-- ฟอร์มล็อกอิน -->
+      <form (ngSubmit)="login()" class="px-8 pb-8 grid gap-4">
+        <!-- Username -->
+        <div>
+          <label class="mb-1 block text-xs font-medium text-slate-500">Username</label>
+          <div class="relative">
+            <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+              <!-- ไอคอน user -->
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"
+                  d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"
+                  d="M4.5 19.5a7.5 7.5 0 0115 0" />
+              </svg>
+            </span>
+            <input
+              class="w-full h-11 pl-10 pr-3 rounded-xl border border-slate-300 bg-white text-sm outline-none
+                     focus:border-indigo-400 focus:ring-4 focus:ring-indigo-200 transition"
+              type="text"
+              [(ngModel)]="username"
+              name="username"
+              required
+              autocomplete="username"
+            />
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div>
+          <label class="mb-1 block text-xs font-medium text-slate-500">Password</label>
+          <div class="relative">
+            <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+              <!-- ไอคอน lock -->
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"
+                  d="M16.5 10.5V7.5a4.5 4.5 0 10-9 0v3" />
+                <rect x="4.5" y="10.5" width="15" height="9" rx="2" ry="2" stroke-width="1.6" />
+              </svg>
+            </span>
+
+            <input
+              class="w-full h-11 pl-10 pr-24 rounded-xl border border-slate-300 bg-white text-sm outline-none
+                     focus:border-indigo-400 focus:ring-4 focus:ring-indigo-200 transition"
+              [type]="showPassword ? 'text' : 'password'"
+              [(ngModel)]="password"
+              name="password"
+              required
+              autocomplete="current-password"
+              (keydown.enter)="login()"
+            />
+
+            <button type="button"
+              class="absolute inset-y-0 right-2 my-1 px-3 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100"
+              (click)="toggleShow()">
+              {{ showPassword ? 'ซ่อน' : 'แสดง' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Options -->
+        <div class="mt-1 flex items-center justify-between">
+          <label class="inline-flex items-center gap-2 text-sm text-slate-600">
+            <input type="checkbox" [(ngModel)]="remember" name="remember"
+                   class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+            จำการเข้าสู่ระบบ
+          </label>
+          <a class="text-sm font-medium text-indigo-700 hover:underline" href="#">ลืมรหัสผ่าน?</a>
+        </div>
+
+        <!-- ปุ่ม Login -->
+        <button
+          class="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl
+                 bg-indigo-600 text-white font-semibold shadow-sm hover:bg-indigo-700
+                 focus:outline-none focus:ring-4 focus:ring-indigo-300 disabled:opacity-60 transition"
+          type="submit"
+          [disabled]="loading || !username || !password">
+          <svg *ngIf="loading" class="h-5 w-5 animate-spin" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+            <path class="opacity-75" fill="currentColor"
+              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+          </svg>
+          <span>{{ loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ' }}</span>
+        </button>
+
+        <!-- หมายเหตุเล็ก ๆ -->
+        <p class="text-center text-xs text-slate-400 mt-2">
+          ระบบ Truck Business Management
+        </p>
+      </form>
+    </main>
+
+    <!-- เครดิตเล็กน้อยด้านล่าง -->
+    <p class="mt-6 text-xs text-white/60">
+  © {{ currentYear }} Truck Business. All rights reserved.
+</p>
+  </div>
+</div>

@@ -1,0 +1,371 @@
+<div class="min-h-screen bg-white text-gray-900">
+  <!-- HEADER -->
+  <header class="bg-white shadow-sm border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 py-6">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-3">
+            <h1 class="text-2xl font-bold text-gray-900">Dashboard ภาพรวม</h1>
+            <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+              {{ periodLabel }}
+            </span>
+          </div>
+          <p class="text-gray-600 text-sm">ข้อมูลสถิติและผลประกอบการ</p>
+        </div>
+
+        <div class="flex items-center gap-3 flex-wrap">
+          <!-- ปุ่มคงเดิม -->
+          <div class="inline-flex p-1 rounded-xl bg-gray-100 border border-gray-200">
+            <button type="button"
+                    (click)="onRangeMode('month')"
+                    [attr.aria-selected]="rangeMode==='month'"
+                    class="px-3 py-1.5 text-sm font-medium rounded-lg transition"
+                    [ngClass]="rangeMode==='month'
+                      ? 'bg-white text-indigo-700 shadow-sm'
+                      : 'text-gray-700 hover:bg-gray-50'">
+              รายเดือน
+            </button>
+            <button type="button"
+                    (click)="onRangeMode('year')"
+                    [attr.aria-selected]="rangeMode==='year'"
+                    class="px-3 py-1.5 text-sm font-medium rounded-lg transition"
+                    [ngClass]="rangeMode==='year'
+                      ? 'bg-white text-indigo-700 shadow-sm'
+                      : 'text-gray-700 hover:bg-gray-50'">
+              รายปี
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <select *ngIf="rangeMode==='month'"
+                    [(ngModel)]="selectedMonth"
+                    (ngModelChange)="onMonthYearChange()"
+                    class="rounded-lg border border-gray-300 bg-white text-gray-900 text-sm px-2.5 py-1.5">
+              <option *ngFor="let m of months" [ngValue]="m.value">{{ m.label }}</option>
+            </select>
+
+            <select [(ngModel)]="selectedYear"
+                    (ngModelChange)="onMonthYearChange()"
+                    class="rounded-lg border border-gray-300 bg-white text-gray-900 text-sm px-2.5 py-1.5">
+              <option *ngFor="let y of yearList" [ngValue]="y">{{ y }}</option>
+            </select>
+          </div>
+
+          <button class="px-3 py-2 rounded-lg font-semibold border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                  (click)="openTravelModal()">คำนวณระยะทาง</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="mx-auto max-w-7xl px-4 py-6">
+
+    <!-- KPI CARDS -->
+    <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <!-- รายรับรวม -->
+      <article class="group rounded-none bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-emerald-100"></div>
+          <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">รายรับรวม</div>
+        </div>
+        <div class="mt-2 text-3xl font-extrabold tracking-tight text-gray-900">
+          ฿{{ incomeTotalDisplay | number:'1.0-0' }}
+        </div>
+        <div class="mt-1 text-xs font-medium text-emerald-700" *ngIf="rangeMode==='month'">จากเดือนที่เลือก</div>
+        <div class="mt-1 text-xs font-medium text-emerald-700" *ngIf="rangeMode==='year'">รวมทั้งปี</div>
+      </article>
+
+      <!-- รายจ่ายรวม -->
+      <article class="group rounded-none bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-rose-100"></div>
+          <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">รายจ่ายรวม</div>
+        </div>
+        <div class="mt-2 text-3xl font-extrabold tracking-tight text-gray-900">
+          ฿{{ expenseTotalDisplay | number:'1.0-0' }}
+        </div>
+        <div class="mt-1 text-xs font-medium text-rose-700" *ngIf="rangeMode==='month'">จากเดือนที่เลือก</div>
+        <div class="mt-1 text-xs font-medium text-rose-700" *ngIf="rangeMode==='year'">รวมทั้งปี</div>
+      </article>
+
+      <!-- รถทั้งหมด -->
+      <article class="group rounded-none bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-amber-100"></div>
+          <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">รถทั้งหมด</div>
+        </div>
+        <div class="mt-2 text-3xl font-extrabold tracking-tight text-gray-900">
+          {{ truckCount }}
+        </div>
+        <div class="mt-1 text-xs font-medium text-amber-700">รวมทุกคันในระบบ</div>
+      </article>
+
+      <!-- พนักงานทั้งหมด -->
+      <article class="group rounded-none bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-sky-100"></div>
+          <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">พนักงานทั้งหมด</div>
+        </div>
+        <div class="mt-2 text-3xl font-extrabold tracking-tight text-gray-900">
+          {{ employeeCount }}
+        </div>
+        <div class="mt-1 text-xs font-medium text-emerald-700">รวมในระบบ</div>
+      </article>
+    </section>
+
+    <!-- CHARTS -->
+    <section class="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <!-- กราฟแท่ง -->
+      <article class="group rounded-none bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-5 overflow-hidden">
+        <div class="-mx-5 -mt-5 px-5 py-2.5 mb-3 bg-gray-50 border-b border-gray-200">
+          <h3 class="text-sm font-semibold text-gray-900">
+            {{ rangeMode==='month' ? 'การเข้างานพนักงาน (รายวันในเดือนที่เลือก)' : 'การเข้างานพนักงาน (สรุปรายเดือนในปีที่เลือก)' }}
+          </h3>
+          <p class="text-xs text-gray-600">ตรงเวลา / สาย / ลา / ขาด</p>
+        </div>
+        <div class="h-64">
+          <canvas baseChart [type]="'bar'" [data]="attendanceData" [options]="attendanceOpt" class="h-full w-full"></canvas>
+        </div>
+      </article>
+
+      <!-- โดนัทเป้าหมาย -->
+      <article class="group rounded-none bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-5 overflow-hidden">
+        <div class="-mx-5 -mt-5 px-5 py-2.5 mb-3 bg-gray-50 border-b border-gray-200 flex items-start justify-between">
+          <div>
+            <h3 class="text-sm font-semibold text-gray-900">เป้าหมายรายได้</h3>
+            <p class="text-xs text-gray-600">{{ rangeMode==='month' ? 'เป้าหมายรายเดือน' : 'เป้าหมายรายปี' }}</p>
+          </div>
+
+          <ng-container *ngIf="!editingTarget; else editTargetTpl">
+            <span class="text-xs font-semibold text-indigo-700 hover:text-indigo-800 hover:underline cursor-pointer select-none"
+                  (click)="startEditTarget()">ปรับเป้าหมาย</span>
+          </ng-container>
+          <ng-template #editTargetTpl>
+            <div class="flex items-center gap-2">
+              <input type="number"
+                     [(ngModel)]="editTargetValue"
+                     placeholder="เช่น 50000000"
+                     class="w-36 rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs" />
+              <span class="text-xs font-semibold text-emerald-700 hover:underline cursor-pointer select-none"
+                    (click)="saveTarget()">บันทึก</span>
+              <span class="text-xs text-gray-600 hover:underline cursor-pointer select-none"
+                    (click)="cancelEditTarget()">ยกเลิก</span>
+            </div>
+          </ng-template>
+        </div>
+
+        <div class="h-64">
+          <canvas baseChart [type]="'doughnut'" [data]="circularChartData" [options]="circularOpts" class="h-full w-full"></canvas>
+        </div>
+
+        <div class="mt-3 text-center">
+          <p class="text-xs text-gray-600">เป้าหมาย: ฿{{ target | number:'1.0-0' }}</p>
+          <p class="mt-1 text-lg font-bold text-emerald-700">บรรลุแล้ว ฿{{ achievedAmount | number:'1.0-0' }}</p>
+        </div>
+      </article>
+    </section>
+
+    <!-- การ์ดการเงิน 4 ใบ -->
+    <section class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <!-- รายได้ -->
+      <article class="group rounded-none bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-5">
+        <div class="mb-3 flex items-center justify-between">
+          <span class="w-10 h-10 bg-emerald-100 grid place-items-center text-emerald-700">
+            <i class="ni ni-money-coins"></i>
+          </span>
+          <div class="text-right">
+            <p class="text-xs text-gray-600">รายได้</p>
+            <p class="text-2xl font-bold tracking-tight text-gray-900">฿{{ incomeTotalDisplay | number:'1.0-0' }}</p>
+            <p class="text-xs font-medium text-emerald-700">{{ incomeProgressValue }}% ของเป้าหมาย</p>
+          </div>
+        </div>
+        <div class="h-2 w-full rounded-full bg-gray-100">
+          <div class="h-2 rounded-full bg-emerald-500" [style.width.%]="incomeProgressValue"></div>
+        </div>
+      </article>
+
+      <!-- รายจ่าย -->
+      <article class="group rounded-none bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-5">
+        <div class="mb-3 flex items-center justify-between">
+          <span class="w-10 h-10 bg-rose-100 grid place-items-center text-rose-700">
+            <i class="ni ni-credit-card"></i>
+          </span>
+          <div class="text-right">
+            <p class="text-xs text-gray-600">รายจ่าย</p>
+            <p class="text-2xl font-bold tracking-tight text-gray-900">฿{{ expenseTotalDisplay | number:'1.0-0' }}</p>
+            <p class="text-xs font-medium text-rose-700">{{ expensePctOfIncome }}% ของรายรับ</p>
+          </div>
+        </div>
+        <div class="h-2 w-full rounded-full bg-gray-100">
+          <div class="h-2 rounded-full bg-rose-500" [style.width.%]="expensePctOfIncome"></div>
+        </div>
+      </article>
+
+      <!-- เงินเดือนพนักงาน -->
+      <article class="group rounded-none bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-5">
+        <div class="mb-3 flex items-center justify-between">
+          <span class="w-10 h-10 bg-amber-100 grid place-items-center text-amber-700">
+            <i class="ni ni-chart-line"></i>
+          </span>
+          <div class="text-right">
+            <p class="text-xs text-gray-600">เงินเดือนพนักงาน</p>
+            <p class="text-2xl font-bold tracking-tight text-gray-900">฿{{ payrollTotalDisplay | number:'1.0-0' }}</p>
+            <p class="text-xs font-medium text-amber-700">{{ payrollPctOfIncome }}% ของรายรับ</p>
+          </div>
+        </div>
+        <div class="h-2 w-full rounded-full bg-gray-100">
+          <div class="h-2 rounded-full bg-amber-500" [style.width.%]="payrollPctOfIncome"></div>
+        </div>
+      </article>
+
+      <!-- รวมทั้งหมด -->
+      <article class="group rounded-none bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-5">
+        <div class="mb-3 flex items-center justify-between">
+          <span class="w-10 h-10 bg-violet-100 grid place-items-center text-violet-700">
+            <i class="ni ni-chart-pie"></i>
+          </span>
+          <div class="text-right">
+            <p class="text-xs text-gray-600">รวมทั้งหมด</p>
+            <p class="text-2xl font-bold tracking-tight text-gray-900">฿{{ netTotalDisplay | number:'1.0-0' }}</p>
+            <p class="text-xs font-medium text-emerald-700">{{ profitPct }}% ของรายรับ</p>
+          </div>
+        </div>
+        <div class="h-2 w-full rounded-full bg-gray-100">
+          <div class="h-2 rounded-full bg-violet-500" [style.width.%]="profitPct"></div>
+        </div>
+      </article>
+    </section>
+  </main>
+</div>
+
+<!-- Travel Cost Modal -->
+<div *ngIf="travelModalOpen" class="fixed inset-0 z-50">
+  <div class="absolute inset-0 bg-black/50" (click)="closeTravelModal()"></div>
+  <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2
+              w-[680px] max-w-[95vw] rounded-none bg-white text-gray-900 shadow-2xl border border-gray-200">
+    <div class="p-5 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+      <h3 class="text-lg font-semibold">คำนวณระยะทาง</h3>
+      <button class="px-3 py-1 rounded-lg bg-gray-100 hover:bg-gray-200" (click)="closeTravelModal()">ปิด</button>
+    </div>
+
+    <div class="px-5 pt-4 pb-5">
+      <div class="flex gap-2 mb-4">
+        <button class="px-3 py-1.5 rounded-lg"
+                [ngClass]="tab==='calc' ? 'bg-indigo-600 text-white' : 'bg-gray-100 hover:bg-gray-200'"
+                (click)="tab='calc'">คำนวณ</button>
+        <button class="px-3 py-1.5 rounded-lg"
+                [ngClass]="tab==='rules' ? 'bg-indigo-600 text-white' : 'bg-gray-100 hover:bg-gray-200'"
+                (click)="tab='rules'">กฎการคำนวณระยะทาง</button>
+      </div>
+
+      <!-- Calc -->
+      <div *ngIf="tab==='calc'" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2">
+            <label class="block text-sm mb-1">ระยะทาง (กม.)</label>
+            <input type="number" [(ngModel)]="calc.distance"
+                   class="w-full rounded-lg bg-white border border-gray-300 px-3 py-2" placeholder="เช่น 7, 18, 25">
+          </div>
+          <div>
+            <label class="block text-sm mb-1">วันที่</label>
+            <input type="date" [(ngModel)]="calc.at"
+                   class="w-full rounded-lg bg-white border border-gray-300 px-3 py-2">
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2">
+          <button class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200" (click)="resetCalc()">ล้าง</button>
+          <button class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white" (click)="submitCalc()" [disabled]="calcLoading">
+            {{ calcLoading ? 'กำลังคำนวณ...' : 'คำนวณ' }}
+          </button>
+        </div>
+
+        <div *ngIf="calcResult" class="mt-3">
+          <div *ngIf="calcResult.rejected" class="rounded-none bg-rose-50 border border-rose-200 p-4">
+            <p class="font-semibold text-rose-700">{{ calcResult.message }}</p>
+          </div>
+          <div *ngIf="!calcResult.rejected" class="rounded-none bg-emerald-50 border border-emerald-200 p-4">
+            <p class="font-semibold text-emerald-700">ราคา/รอบ: ฿{{ calcResult.price_per_round | number:'1.0-0' }}</p>
+            <p class="text-gray-700 text-sm mt-1">{{ calcResult.message }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rules / History -->
+      <div *ngIf="tab==='rules'" class="space-y-4">
+        <div class="rounded-none border border-gray-200 overflow-hidden">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="p-2 text-left font-semibold text-gray-700">ช่วงกม.</th>
+                <th class="p-2 text-right font-semibold text-gray-700">ราคา/รอบ</th>
+                <th class="p-2 font-semibold text-gray-700">มีผลตั้งแต่</th>
+                <th class="p-2 font-semibold text-gray-700">สิ้นสุด</th>
+                <th class="p-2 font-semibold text-gray-700">สถานะ</th>
+                <th class="p-2 text-right font-semibold text-gray-700">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let r of rules" class="border-t border-gray-200">
+                <td class="p-2 text-gray-900">{{ r.min_km }}–{{ r.max_km ?? '∞' }}</td>
+                <td class="p-2 text-right text-gray-900">฿{{ r.price_per_round | number:'1.0-0' }}</td>
+                <td class="p-2 text-gray-900">{{ r.effective_from | date:'dd/MM/yyyy' }}</td>
+                <td class="p-2 text-gray-900">{{ r.effective_to ? (r.effective_to | date:'dd/MM/yyyy') : '-' }}</td>
+                <td class="p-2">
+                  <span class="px-2 py-0.5 rounded-full text-xs"
+                        [ngClass]="r.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'">
+                    {{ r.is_active ? 'ใช้' : 'งดใช้' }}
+                  </span>
+                </td>
+                <td class="p-2 text-right space-x-2">
+                  <button class="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200" (click)="startEdit(r)">แก้ไข</button>
+                  <button class="px-2 py-1 rounded bg-rose-100 hover:bg-rose-200 text-rose-700" (click)="removeRule(r)">ลบ</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- editor -->
+        <div class="rounded-none bg-gray-50 border border-gray-200 p-4">
+          <h4 class="font-semibold mb-3 text-gray-900">{{ editingRule?.id ? 'แก้ไขการคำนวณระยะทาง' : 'เพิ่มการคำนวณระยะทาง' }}</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-6 gap-3">
+            <div>
+              <label class="block text-xs mb-1 text-gray-700">จาก (กม.)</label>
+              <input type="number" [(ngModel)]="editingRule.min_km" class="w-full rounded-lg bg-white border border-gray-300 px-3 py-2">
+            </div>
+            <div>
+              <label class="block text-xs mb-1 text-gray-700">ถึง (กม.)</label>
+              <input type="number" [(ngModel)]="editingRule.max_km" class="w-full rounded-lg bg-white border border-gray-300 px-3 py-2" placeholder="เว้นว่าง = ∞">
+            </div>
+            <div>
+              <label class="block text-xs mb-1 text-gray-700">ราคา/รอบ</label>
+              <input type="number" [(ngModel)]="editingRule.price_per_round" class="w-full rounded-lg bg-white border border-gray-300 px-3 py-2">
+            </div>
+            <div>
+              <label class="block text-xs mb-1 text-gray-700">มีผลตั้งแต่</label>
+              <input type="date" [(ngModel)]="effectiveFromStr" class="w-full rounded-lg bg-white border border-gray-300 px-3 py-2">
+            </div>
+            <div>
+              <label class="block text-xs mb-1 text-gray-700">สิ้นสุด</label>
+              <input type="date" [(ngModel)]="effectiveToStr" class="w-full rounded-lg bg-white border border-gray-300 px-3 py-2" placeholder="ว่าง = ไม่สิ้นสุด">
+            </div>
+            <div class="flex items-end">
+              <label class="inline-flex items-center gap-2">
+                <input type="checkbox" [(ngModel)]="editingRule.is_active">
+                <span class="text-sm text-gray-900">ใช้งาน</span>
+              </label>
+            </div>
+          </div>
+          <div class="mt-3 flex justify-end gap-2">
+            <button class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200" (click)="cancelEdit()">ยกเลิก</button>
+            <button class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white" (click)="saveRule()">บันทึก</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="h-4"></div>
+    </div>
+  </div>
+</div>

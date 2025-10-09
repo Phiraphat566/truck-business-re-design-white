@@ -1,0 +1,218 @@
+<div class="flex h-screen bg-gray-100 dark:bg-zinc-950">
+  <!-- HOTZONE: แถบชิดซ้าย 6px สำหรับ hover เพื่อกางเมนูชั่วคราว (เฉพาะตอนย่อ) -->
+  <div
+    *ngIf="isCollapsed"
+    class="hidden md:block fixed left-0 top-0 bottom-0 w-1.5 z-40 bg-transparent"
+    (mouseenter)="startPeek()"
+    (mouseleave)="endPeek()">
+  </div>
+
+  <!-- Mobile hamburger (เฉพาะจอเล็ก) -->
+  <button
+    class="md:hidden fixed top-3 left-3 z-50 rounded-lg border px-3 py-2 bg-white/90 dark:bg-slate-900/90"
+    (click)="openMobile()" aria-label="Open menu">
+    <svg viewBox="0 0 24 24" class="w-5 h-5">
+      <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+    </svg>
+  </button>
+
+  <!-- Sidebar (Desktop) -->
+  <aside
+    (mouseenter)="startPeek()"
+    (mouseleave)="endPeek()"
+    [ngClass]="expanded ? 'w-72' : 'w-20'"
+    class="hidden md:flex bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-100
+           flex-col py-4 px-4 shadow-2xl enhanced-sidebar transition-all duration-200 ease-in-out
+           border-r border-gray-100 dark:border-slate-800 rounded-tr-none rounded-br-none">
+
+    <!-- Top: ปุ่ม 3 ขีดอยู่ด้านขวา -->
+    <div class="flex items-center justify-end mb-3">
+      <button (click)="toggleSidebar()"
+              class="inline-flex items-center justify-center w-9 h-9 rounded-lg border
+                     hover:bg-gray-50 dark:hover:bg-slate-800"
+              title="ย่อ/ขยายเมนู (Ctrl+B)">
+        <svg viewBox="0 0 24 24" class="w-5 h-5">
+          <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Profile (ซ่อนอัตโนมัติเมื่อย่อ) -->
+    <div
+      *ngIf="user$ | async as u; else loadingProfile"
+      class="flex flex-col items-center mb-4 profile-section
+             cursor-pointer select-none group rounded-xl p-3
+             bg-blue-50/60 dark:bg-slate-800/40 hover:bg-blue-100/70 dark:hover:bg-slate-800 transition"
+      role="button" tabindex="0"
+      (click)="goProfile()" (keydown.enter)="goProfile()"
+      [ngClass]="expanded ? '' : 'pointer-events-none opacity-0 h-0 overflow-hidden'">
+      <div class="relative w-16 h-16 mb-2 mx-auto">
+        <ng-container *ngIf="u.profile_image_path && !avatarFallback; else initialsAvatar">
+          <img [src]="u.profile_image_path" (error)="useFallback()" alt="Profile"
+               class="w-16 h-16 rounded-full object-cover ring-2 ring-blue-400/60 group-hover:ring-blue-500" loading="lazy"/>
+        </ng-container>
+        <ng-template #initialsAvatar>
+          <div class="w-16 h-16 rounded-full grid place-items-center text-white
+                      bg-gradient-to-br from-indigo-500 to-blue-600 text-lg font-semibold">
+            {{ initial(u) }}
+          </div>
+        </ng-template>
+      </div>
+      <h2 class="text-lg font-semibold">{{ u?.name || u?.username }}</h2>
+      <p class="text-sm text-gray-500 dark:text-slate-400">@{{ u?.username }}</p>
+    </div>
+
+    <ng-template #loadingProfile>
+      <div class="flex flex-col items-center mb-4 animate-pulse"
+           [ngClass]="expanded ? '' : 'pointer-events-none opacity-0 h-0 overflow-hidden'">
+        <div class="w-16 h-16 rounded-full bg-gray-200 dark:bg-slate-700 mb-2"></div>
+        <div class="h-4 w-24 bg-gray-200 dark:bg-slate-700 rounded mb-1"></div>
+        <div class="h-3 w-20 bg-gray-200 dark:bg-slate-700 rounded"></div>
+      </div>
+    </ng-template>
+
+    <div class="border-b border-gray-200 dark:border-slate-800 mb-3"></div>
+
+    <!-- Menu -->
+    <nav class="flex-1 flex flex-col gap-1">
+      <a *ngFor="let m of filteredMenu()"
+         [routerLink]="m.path" routerLinkActive="active-link"
+         class="flex items-center gap-3 px-3 py-2 rounded-lg transition nav-link
+                hover:bg-gray-100 dark:hover:bg-slate-800"
+         [attr.title]="expanded ? null : m.label"
+         [ngClass]="router.isActive(m.path, false)
+          ? 'text-blue-600 dark:text-blue-400 font-semibold bg-blue-50 dark:bg-blue-950/30'
+          : ''">
+
+        <!-- ไอคอน SVG -->
+        <span class="w-6 flex justify-center">
+          <ng-container [ngSwitch]="m.icon">
+            <!-- grid -->
+            <svg *ngSwitchCase="'grid'" viewBox="0 0 24 24"
+                 [attr.class]="'w-5 h-5 ' + (router.isActive(m.path,false)? 'text-blue-600' : 'text-gray-500')"
+                 fill="currentColor"><path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/></svg>
+            <!-- clock -->
+            <svg *ngSwitchCase="'clock'" viewBox="0 0 24 24"
+                 [attr.class]="'w-5 h-5 ' + (router.isActive(m.path,false)? 'text-blue-600' : 'text-gray-500')"
+                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>
+            </svg>
+            <!-- user -->
+            <svg *ngSwitchCase="'user'" viewBox="0 0 24 24"
+                 [attr.class]="'w-5 h-5 ' + (router.isActive(m.path,false)? 'text-blue-600' : 'text-gray-500')"
+                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+            <!-- coins -->
+            <svg *ngSwitchCase="'coins'" viewBox="0 0 24 24"
+                 [attr.class]="'w-5 h-5 ' + (router.isActive(m.path,false)? 'text-blue-600' : 'text-gray-500')"
+                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <ellipse cx="8" cy="6" rx="5" ry="3"/><path d="M3 6v6c0 1.66 2.24 3 5 3s5-1.34 5-3V6M16 9c3 0 5 1.34 5 3s-2 3-5 3-5-1.34-5-3"/>
+            </svg>
+            <!-- calendar -->
+            <svg *ngSwitchCase="'calendar'" viewBox="0 0 24 24"
+                 [attr.class]="'w-5 h-5 ' + (router.isActive(m.path,false)? 'text-blue-600' : 'text-gray-500')"
+                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <!-- truck -->
+            <svg *ngSwitchCase="'truck'" viewBox="0 0 24 24"
+                 [attr.class]="'w-5 h-5 ' + (router.isActive(m.path,false)? 'text-blue-600' : 'text-gray-500')"
+                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 17H5a2 2 0 0 1-2-2V7h9v10m0-6h4l3 3v3a2 2 0 0 1-2 2h-1"/>
+              <circle cx="7.5" cy="19" r="1.5"/><circle cx="17.5" cy="19" r="1.5"/>
+            </svg>
+            <!-- phone -->
+            <svg *ngSwitchCase="'phone'" viewBox="0 0 24 24"
+                 [attr.class]="'w-5 h-5 ' + (router.isActive(m.path,false)? 'text-blue-600' : 'text-gray-500')"
+                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 2.1 3.18 2 2 0 0 1 4.11 1h2.8a2 2 0 0 1 2 1.72c.12.9.31 1.77.57 2.61a2 2 0 0 1-.45 2.11L8 8a16 16 0 0 0 8 8l.56-.99a2 2 0 0 1 2.11-.86c.84.26 1.71.45 2.61.57A2 2 0 0 1 22 16.92z"/>
+            </svg>
+            <!-- default -->
+            <svg *ngSwitchDefault viewBox="0 0 24 24"
+                 [attr.class]="'w-5 h-5 ' + (router.isActive(m.path,false)? 'text-blue-600' : 'text-gray-500')"
+                 fill="currentColor"><path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/></svg>
+          </ng-container>
+        </span>
+
+        <span *ngIf="expanded">{{ m.label }}</span>
+      </a>
+    </nav>
+
+    <!-- Logout -->
+    <div class="mt-auto pt-4">
+      <button (click)="confirmLogout()"
+        class="relative w-full inline-flex items-center justify-center
+               px-4 py-3 rounded-lg transition
+               text-blue-600 hover:text-blue-800
+               bg-blue-50 hover:bg-blue-100
+               dark:text-blue-300 dark:hover:text-blue-200
+               dark:bg-slate-800 dark:hover:bg-slate-700">
+        <span class="absolute left-4 w-6 flex justify-center">
+          <!-- logout icon -->
+          <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>
+          </svg>
+        </span>
+        <span *ngIf="expanded">Log out</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Mobile overlay menu -->
+  <div *ngIf="showMobileMenu" class="fixed inset-0 z-50 md:hidden">
+    <div class="absolute inset-0 bg-black/40" (click)="closeMobile()"></div>
+    <aside class="absolute left-0 top-0 bottom-0 w-72 bg-white dark:bg-slate-900
+                  text-gray-800 dark:text-slate-100 p-4 border-r border-gray-100 dark:border-slate-800">
+      <div class="flex items-center justify-between mb-3">
+        <strong>เมนู</strong>
+        <button (click)="closeMobile()">✕</button>
+      </div>
+      <nav class="flex flex-col gap-1">
+        <button *ngFor="let m of filteredMenu()"
+                (click)="navigateTo(m.path)"
+                class="flex items-center gap-3 px-3 py-2 rounded-lg text-left hover:bg-gray-100 dark:hover:bg-slate-800">
+          <!-- ไอคอนแบบเดียวกับด้านบน (เวอร์ชันย่อเพื่อความกระชับ) -->
+          <span class="w-6 flex justify-center">
+            <ng-container [ngSwitch]="m.icon">
+              <svg *ngSwitchCase="'grid'" viewBox="0 0 24 24" class="w-5 h-5 text-gray-600" fill="currentColor"><path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/></svg>
+              <svg *ngSwitchCase="'clock'" viewBox="0 0 24 24" class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+              <svg *ngSwitchCase="'user'" viewBox="0 0 24 24" class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <svg *ngSwitchCase="'coins'" viewBox="0 0 24 24" class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="8" cy="6" rx="5" ry="3"/><path d="M3 6v6c0 1.66 2.24 3 5 3s5-1.34 5-3V6M16 9c3 0 5 1.34 5 3s-2 3-5 3-5-1.34-5-3"/></svg>
+              <svg *ngSwitchCase="'calendar'" viewBox="0 0 24 24" class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <svg *ngSwitchCase="'truck'" viewBox="0 0 24 24" class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17H5a2 2 0 0 1-2-2V7h9v10m0-6h4l3 3v3a2 2 0 0 1-2 2h-1"/><circle cx="7.5" cy="19" r="1.5"/><circle cx="17.5" cy="19" r="1.5"/></svg>
+              <svg *ngSwitchCase="'phone'" viewBox="0 0 24 24" class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 2.1 3.18 2 2 0 0 1 4.11 1h2.8a2 2 0 0 1 2 1.72c.12.9.31 1.77.57 2.61a2 2 0 0 1-.45 2.11L8 8a16 16 0 0 0 8 8l.56-.99a2 2 0 0 1 2.11-.86c.84.26 1.71.45 2.61.57A2 2 0 0 1 22 16.92z"/></svg>
+              <svg *ngSwitchDefault viewBox="0 0 24 24" class="w-5 h-5 text-gray-600" fill="currentColor"><path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/></svg>
+            </ng-container>
+          </span>
+          <span>{{ m.label }}</span>
+        </button>
+      </nav>
+      <div class="mt-4">
+        <button (click)="confirmLogout()" class="px-3 py-2 rounded-lg border text-sm">Logout</button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Content Area -->
+<main class="flex-1 overflow-auto bg-transparent">
+  <router-outlet></router-outlet>
+</main>
+
+  <!-- Logout confirm -->
+  <div *ngIf="showLogoutConfirm" class="fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-black/40" (click)="showLogoutConfirm=false"></div>
+    <div class="absolute left-1/2 top-1/3 -translate-x-1/2 w-[92vw] max-w-sm
+                bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl shadow-xl p-5">
+      <h3 class="text-lg font-semibold mb-2">ออกจากระบบ?</h3>
+      <p class="text-sm text-gray-500 mb-4">คุณต้องการออกจากระบบตอนนี้หรือไม่</p>
+      <div class="flex justify-end gap-2">
+        <button class="px-3 py-2 rounded-lg border" (click)="showLogoutConfirm=false">ยกเลิก</button>
+        <button class="px-3 py-2 rounded-lg bg-blue-600 text-white" (click)="doLogout()">ออกจากระบบ</button>
+      </div>
+    </div>
+  </div>
+</div>

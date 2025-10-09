@@ -1,0 +1,235 @@
+<div class="min-h-screen bg-white text-gray-900">
+
+  <!-- HEADER -->
+  <header class="bg-white shadow-sm border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 py-6">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">ระบบบันทึกเวลาเข้า – ออกงาน</h1>
+          <p class="text-gray-600">ดูสรุปทั้งเดือน และประวัติรายคน</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <!-- ปุ่มกลับ -->
+          <button *ngIf="view==='month'"
+                  type="button"
+                  (click)="resetToYear()"
+                  class="px-4 py-2 rounded-lg font-semibold border border-red-600 bg-red-600 text-white hover:bg-red-700">
+            กลับ
+          </button>
+
+          <!-- ปุ่มเพิ่มปี -->
+          <button *ngIf="view==='year'"
+                  type="button"
+                  (click)="addYear()"
+                  class="px-4 py-2 rounded-lg font-semibold border border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
+            เพิ่มปีใหม่
+          </button>
+          <!-- ตัดสวิตช์ธีมออก -->
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="max-w-7xl mx-auto px-4 py-6">
+
+    <!-- YEAR LIST -->
+    <div *ngIf="view==='year'" class="space-y-4">
+      <div *ngIf="loadingYears" class="text-sm text-gray-600">กำลังโหลดปี...</div>
+
+      <div *ngFor="let y of years"
+           class="rounded-none border border-gray-300 bg-white px-6 py-4 flex items-center justify-between shadow-sm hover:shadow-md transition">
+        <div class="flex items-center gap-4">
+          <div class="px-4 py-1 rounded-md font-bold bg-gray-50 text-gray-900 border border-gray-200">
+            ปี {{ y.year }}
+          </div>
+          <div class="text-sm text-gray-600">กำลังแสดงข้อมูลของปี {{ y.year }}</div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="text-xs bg-blue-50 text-blue-700 rounded-md px-3 py-1 border border-blue-200">
+            {{ y.monthsCount }} เดือน
+          </div>
+          <button class="rounded-lg bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-sm font-semibold text-white"
+                  (click)="openYear(y.year)">
+            เปิดดูเดือน
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MONTH DASHBOARD -->
+    <div *ngIf="view==='month'" class="space-y-6">
+
+      <!-- Controls -->
+      <div class="flex flex-wrap gap-2 items-center">
+        <div class="text-sm text-gray-700">ปี {{ year }}</div>
+
+        <select [(ngModel)]="selectedMonthIndex"
+                (change)="onChangeMonth()"
+                class="bg-white border border-gray-300 rounded-md px-3 py-1.5 text-sm">
+          <option *ngFor="let m of months; index as i" [ngValue]="i">{{ m }} {{ year }}</option>
+        </select>
+
+        <input [(ngModel)]="searchText" placeholder="ค้นหาชื่อพนักงาน..."
+               class="bg-white border border-gray-300 rounded-md px-3 py-1.5 text-sm flex-1 min-w-[220px]"/>
+
+        <select [(ngModel)]="filterScope"
+                class="bg-white border border-gray-300 rounded-md px-3 py-1.5 text-sm">
+          <option value="all">ทั้งหมด</option>
+          <option value="ontime">ตรงเวลา</option>
+          <option value="late">มาสาย</option>
+          <option value="leave">ลา</option>
+          <option value="absent">ขาดงาน</option>
+        </select>
+
+        <!-- เลือกวัน -->
+        <input type="date" [(ngModel)]="filterDate"
+               class="bg-white border border-gray-300 rounded-md px-3 py-1.5 text-sm" />
+
+        <!-- เฉพาะวันที่มีข้อมูลจริง -->
+        <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+          <input type="checkbox" [(ngModel)]="onlyWithData" class="rounded" />
+          เฉพาะวันที่มีข้อมูล
+        </label>
+
+        <!-- ล้างตัวกรองวัน -->
+        <button type="button" (click)="clearDayFilter()"
+                class="px-3 py-1.5 rounded-md text-sm border border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
+          ล้างวัน
+        </button>
+
+        <!-- ปุ่มควบคุม accordion (ดันไปขวา) -->
+        <div class="ml-auto flex items-center gap-2">
+          <button type="button" (click)="expandAll()"
+                  class="px-3 py-1.5 rounded-md text-sm border border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
+            ขยายทั้งหมด
+          </button>
+          <button type="button" (click)="collapseAll()"
+                  class="px-3 py-1.5 rounded-md text-sm border border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
+            ย่อทั้งหมด
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="rounded-none bg-white border border-gray-300 p-4 shadow-sm">
+          <div class="text-xs text-gray-600 mb-1">จำนวนพนักงาน</div>
+          <div class="text-2xl font-semibold">{{ headStats().people || '-' }}</div>
+        </div>
+        <div class="rounded-none bg-white border border-gray-300 p-4 shadow-sm">
+          <div class="text-xs text-gray-600 mb-1">ตรงเวลา</div>
+          <div class="text-2xl font-semibold">{{ headStats().ontimePct || '-' }}%</div>
+        </div>
+        <div class="rounded-none bg-white border border-gray-300 p-4 shadow-sm">
+          <div class="text-xs text-gray-600 mb-1">มาสาย / ขาดงาน</div>
+          <div class="text-sm">สาย: {{ headStats().latePct || '-' }}% · ขาด: {{ headStats().absentPct || '-' }}%</div>
+        </div>
+      </div>
+
+      <div *ngIf="loadingMonth" class="text-sm text-gray-600">กำลังโหลดข้อมูลเดือน...</div>
+
+      <!-- Day groups: Accordion -->
+      <div *ngFor="let d of filteredDays()"
+           class="rounded-none border border-gray-300 bg-white overflow-hidden shadow-sm">
+        <!-- Header -->
+        <button type="button"
+                (click)="toggleDay(d.date)"
+                class="w-full px-4 py-2 bg-gray-50 border-b border-gray-200 text-sm flex items-center justify-between hover:bg-gray-100">
+          <span>{{ formatYMD(d.date) }}</span>
+          <span class="text-xs text-gray-600">
+            รายการ {{ d.rows.length }} · {{ isOpen(d.date) ? 'ซ่อน' : 'แสดง' }}
+          </span>
+        </button>
+
+        <!-- Body -->
+        <div *ngIf="isOpen(d.date)">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="text-gray-700">
+                <tr class="bg-gray-50 border-b border-gray-200">
+                  <th class="text-left px-4 py-2 w-10">#</th>
+                  <th class="text-left px-2 py-2">พนักงาน</th>
+                  <th class="text-left px-2 py-2">เข้า</th>
+                  <th class="text-left px-2 py-2">ออก</th>
+                  <th class="text-left px-2 py-2">สถานะ</th>
+                  <th class="text-left px-2 py-2">หมายเหตุ</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let r of d.rows; index as idx" class="border-b border-gray-200">
+                  <td class="px-4 py-2 text-gray-600">{{ idx+1 }}</td>
+                  <td class="px-2 py-2">
+                    <button (click)="openEmpHistory(r.employee_id, r.employee_name)"
+                            class="underline underline-offset-2 hover:text-indigo-600">
+                      {{ r.employee_name }}
+                    </button>
+                  </td>
+                  <td class="px-2 py-2">{{ r.check_in || '-' }}</td>
+                  <td class="px-2 py-2">{{ r.check_out || '-' }}</td>
+                  <td class="px-2 py-2">
+                    <span class="px-2 py-0.5 rounded-md text-xs" [ngClass]="badgeClassTable(d.date, r)">
+                      {{ statusTextTable(d.date, r) }}
+                    </span>
+                  </td>
+                  <td class="px-2 py-2">{{ r.note || '-' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="px-4 py-2 text-xs text-gray-600">
+            แสดงตัวอย่าง: 1–10 จาก 31 วัน
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMPLOYEE MONTH MODAL -->
+  <div *ngIf="modalOpen()" class="fixed inset-0 z-50 flex items-center justify-center">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" (click)="closeModal()"></div>
+
+    <div class="relative w-[940px] max-w-[95vw] rounded-none bg-white border border-gray-300 shadow-2xl">
+      <div class="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
+        <div class="font-semibold">
+          ประวัติ: {{ modalEmp()?.name || '-' }} ·
+          <span class="text-gray-600">{{ (modalMonthIndex+1) | number:'2.0' }}/{{ modalYear }}</span>
+        </div>
+        <button (click)="closeModal()" class="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50">ปิด</button>
+      </div>
+
+      <div class="p-4">
+        <div *ngIf="loadingHistory" class="text-sm text-gray-600 mb-2">กำลังโหลดประวัติ...</div>
+
+        <!-- ส่วนกริดหัววัน & cell วันที่: คงเดิมตามที่ชอบ -->
+        <div class="grid grid-cols-7 text-xs text-gray-500 mb-2">
+          <div class="text-center">จ.</div><div class="text-center">อ.</div><div class="text-center">พ.</div>
+          <div class="text-center">พฤ.</div><div class="text-center">ศ.</div><div class="text-center">ส.</div><div class="text-center">อา.</div>
+        </div>
+
+        <div class="grid grid-cols-7 gap-2">
+          <ng-container *ngFor="let w of weeks">
+            <ng-container *ngFor="let c of w">
+              <div class="min-h-20 rounded-lg p-2" [ngClass]="c.day ? pillClass(c.status) : 'bg-transparent'">
+                <div class="text-xs text-gray-500">{{ c.day || '' }}</div>
+                <div class="text-[11px] mt-1">
+                  {{ c.day ? statusText(c.status, c.timeIn) : '' }}
+                </div>
+              </div>
+            </ng-container>
+          </ng-container>
+        </div>
+
+        <!-- Legend -->
+        <div class="flex flex-wrap items-center gap-4 text-[11px] text-gray-700 mt-4">
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-emerald-500/60 inline-block"></span> ตรงเวลา</div>
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-orange-500/60 inline-block"></span> มาสาย</div>
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-amber-500/60 inline-block"></span> ลา</div>
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-rose-500/60 inline-block"></span> ขาดงาน</div>
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-sky-500/60 inline-block"></span> หยุด</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

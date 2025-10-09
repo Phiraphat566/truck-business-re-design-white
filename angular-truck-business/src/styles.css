@@ -1,0 +1,122 @@
+/* You can add global styles to this file, and also import other style files */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* styles.css */
+@layer base {
+  html, body, app-root {
+    @apply min-h-screen bg-gray-100 dark:bg-zinc-950;
+  }
+}
+
+
+/* Global Blue Theme */
+:root {
+  --primary-blue: #3b82f6;
+  --primary-blue-dark: #1d4ed8;
+  --primary-blue-light: #60a5fa;
+  --blue-50: #eff6ff;
+  --blue-100: #dbeafe;
+  --blue-200: #bfdbfe;
+  --blue-500: #3b82f6;
+  --blue-600: #2563eb;
+  --blue-700: #1d4ed8;
+}
+
+/* Override default button styles with blue theme */
+.btn-primary {
+  background: linear-gradient(135deg, var(--blue-500) 0%, var(--blue-600) 100%);
+  color: white;
+  border: 1px solid var(--blue-600);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, var(--blue-600) 0%, var(--blue-700) 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Blue accent colors for forms and components */
+.form-control:focus {
+  border-color: var(--blue-500);
+  box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+}
+
+.text-primary {
+  color: var(--primary-blue) !important;
+}
+
+.bg-primary {
+  background-color: var(--primary-blue) !important;
+}
+
+.border-primary {
+  border-color: var(--primary-blue) !important;
+}
+
+/* Blue theme for charts and data visualization */
+.chart-primary {
+  color: var(--primary-blue);
+}
+
+/* Blue themed cards and panels */
+.card-primary {
+  border-left: 4px solid var(--primary-blue);
+}
+
+.card-primary .card-header {
+  background: linear-gradient(135deg, var(--blue-50) 0%, var(--blue-100) 100%);
+  border-bottom: 1px solid var(--blue-200);
+}
+
+/* Blue themed alerts */
+.alert-primary {
+  background: linear-gradient(135deg, var(--blue-50) 0%, var(--blue-100) 100%);
+  border: 1px solid var(--blue-200);
+  color: var(--blue-700);
+}
+
+/* Blue themed badges and labels */
+.badge-primary {
+  background: var(--primary-blue);
+  color: white;
+}
+
+/* Blue themed progress bars */
+.progress-bar-primary {
+  background: linear-gradient(90deg, var(--blue-500) 0%, var(--blue-600) 100%);
+}
+
+/* Blue themed tables */
+.table-primary thead th {
+  background: var(--blue-50);
+  color: var(--blue-700);
+  border-bottom: 2px solid var(--blue-200);
+}
+
+.table-primary tbody tr:hover {
+  background: var(--blue-50);
+}
+
+/* Blue themed pagination */
+.pagination .page-link {
+  color: var(--primary-blue);
+  border-color: var(--blue-200);
+}
+
+.pagination .page-link:hover {
+  background: var(--blue-50);
+  border-color: var(--blue-300);
+}
+
+.pagination .page-item.active .page-link {
+  background: var(--primary-blue);
+  border-color: var(--primary-blue);
+}

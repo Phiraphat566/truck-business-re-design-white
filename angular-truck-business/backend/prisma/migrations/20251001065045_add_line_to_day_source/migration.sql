@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `EmployeeDayStatus` MODIFY `status` ENUM('NOT_CHECKED_IN', 'WORKING', 'OFF_DUTY', 'ON_LEAVE', 'ABSENT', 'LINE') NOT NULL;

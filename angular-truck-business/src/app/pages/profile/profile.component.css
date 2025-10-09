@@ -1,0 +1,45 @@
+/* Simple Profile Page Styling */
+
+/* Remove fancy animations - focus on usability */
+* {
+  box-sizing: border-box;
+}
+
+/* Basic transitions for interactive elements */
+input:focus,
+select:focus,
+button:focus {
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+button {
+  transition: background-color 0.15s ease-in-out;
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+  .lg\:col-span-1,
+  .lg\:col-span-2 {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .md\:grid-cols-2 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+  
+  .md\:col-span-2 {
+    grid-column: span 1;
+  }
+}
+
+/* Print styles */
+@media print {
+  .bg-gray-50,
+  .bg-white,
+  .shadow {
+    background: white !important;
+    box-shadow: none !important;
+  }
+}
