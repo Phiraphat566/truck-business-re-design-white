@@ -91,19 +91,26 @@
                      class="bg-white border border-gray-300 hover:border-blue-400 hover:shadow-sm rounded-none p-4 cursor-pointer transition"
                      (click)="openMonthDetail(selectedYear, month)">
                   <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                      <div class="w-8 h-8 bg-gray-50 rounded-none border border-gray-200 flex items-center justify-center">
-                        <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                        </svg>
-                      </div>
-                      <span class="font-medium">{{ month }}</span>
-                    </div>
-                    <button (click)="$event.stopPropagation(); addIncome(selectedYear, month)"
-                            class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded-lg font-semibold">
-                      เพิ่มเอกสาร
-                    </button>
-                  </div>
+  <div class="flex items-center space-x-3">
+    <div class="w-8 h-8 bg-gray-50 rounded-none border border-gray-200 flex items-center justify-center">
+      <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+      </svg>
+    </div>
+    <span class="font-medium">{{ month }}</span>
+  </div>
+
+  <button type="button"
+          (click)="$event.stopPropagation()"
+          class="w-9 h-9 flex items-center justify-center rounded-none
+                 border border-gray-200 text-gray-700 hover:bg-gray-50"
+          title="เมนู">
+    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M4 7h16v2H4V7zm0 4h16v2H4v-2zm0 4h16v2H4v-2z"/>
+    </svg>
+  </button>
+</div>
                 </div>
               </div>
 
@@ -147,7 +154,7 @@
             </select>
 
             <button (click)="addIncome(selectedYear, months[chartMonthIndex])"
-                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold">เพิ่มเอกสาร</button>
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold">เพิ่มรายรับ</button>
           </div>
         </div>
 
@@ -207,8 +214,9 @@
                           </svg>
                         </button>
                         <button type="button"
-                                (click)="confirmDelete(inc); $event.stopPropagation()"
-                                class="w-8 h-8 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg flex items-center justify-center">
+        (click)="openDeleteModal(inc); $event.stopPropagation()"
+        class="w-8 h-8 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg flex items-center justify-center">
+
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -361,3 +369,32 @@
     </form>
   </div>
 </div>
+
+<!-- ===== Confirm Delete: Income ===== -->
+<div *ngIf="deleteConfirmOpen" class="fixed inset-0 z-[90] flex items-center justify-center">
+  <!-- overlay -->
+  <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" (click)="closeDeleteModal()"></div>
+
+  <!-- modal -->
+  <div class="relative bg-white w-full max-w-md mx-4 rounded-2xl shadow-2xl border border-gray-200 p-6">
+    <h3 class="text-xl font-bold text-center mb-2">ลบเอกสารรายรับ?</h3>
+    <p class="text-center text-gray-700 mb-6">
+      ต้องการลบเอกสารเลขที่ <b>{{ deleteTarget?.receiptNo }}</b> ใช่หรือไม่
+    </p>
+
+    <div class="grid grid-cols-2 gap-3">
+      <button type="button"
+              class="h-11 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 font-semibold"
+              (click)="closeDeleteModal()">
+        ยกเลิก
+      </button>
+      <button type="button"
+              class="h-11 rounded-xl bg-rose-600 text-white hover:bg-rose-700 font-semibold disabled:opacity-60"
+              [disabled]="isLoading"
+              (click)="confirmDeleteNow()">
+        {{ isLoading ? 'กำลังลบ...' : 'ลบรายการ' }}
+      </button>
+    </div>
+  </div>
+</div>
+

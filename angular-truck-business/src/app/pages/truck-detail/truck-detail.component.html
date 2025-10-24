@@ -1,36 +1,57 @@
 <!-- truck-detail.component.html -->
 <div class="min-h-screen bg-white text-gray-900">
-
   <!-- HEADER -->
   <header class="bg-white shadow-sm border-b border-gray-200">
     <div class="max-w-7xl mx-auto px-4 py-6">
       <div class="flex items-start justify-between gap-4">
         <div>
           <h1 class="text-2xl font-bold">จัดการรถบรรทุก</h1>
-          <p class="text-gray-600">เพิ่ม/แก้ไขรถ • บันทึกระยะทาง • บันทึกน้ำมัน</p>
+          <p class="text-gray-600">เพิ่ม/แก้ไข • บันทึกระยะทาง • บันทึกน้ำมัน</p>
         </div>
 
         <div class="flex flex-wrap items-center justify-end gap-3 w-full max-w-3xl">
           <!-- ค้นหา -->
           <div class="relative flex-1 min-w-[220px] max-w-[380px]">
-            <input type="text" [(ngModel)]="searchTerm" placeholder="ค้นหาทะเบียน/รุ่น/รหัสรถ/คนขับ..."
-              class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2.5 pl-10 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"/>
-            <svg class="absolute left-3 top-3.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input
+              type="text"
+              [(ngModel)]="searchTerm"
+              placeholder="ค้นหาทะเบียน/รุ่น/รหัสรถ/คนขับ..."
+              class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2.5 pl-10 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+            <svg
+              class="absolute left-3 top-3.5 w-4 h-4 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
           </div>
 
           <!-- โหมดแก้ไข -->
-          <button type="button" (click)="editingMode = !editingMode" [attr.aria-pressed]="editingMode"
+          <button
+            type="button"
+            (click)="editingMode = !editingMode"
+            [attr.aria-pressed]="editingMode"
             class="px-4 py-2.5 rounded-lg font-semibold border transition"
-            [ngClass]="editingMode ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'">
+            [ngClass]="editingMode ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'"
+          >
             {{ editingMode ? 'ออกจากโหมดแก้ไข' : 'โหมดแก้ไข' }}
           </button>
 
           <!-- เพิ่มรถ -->
-          <button type="button" (click)="openAddPopup()"
-            class="bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-indigo-700 transition shadow-sm">
+          <button
+            type="button"
+            (click)="openAddPopup()"
+            class="bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-indigo-700 transition shadow-sm"
+          >
             เพิ่มรถบรรทุก
           </button>
-          <!-- เอาสวิตช์ธีมออกเพื่อคุมโทนขาวคงที่ -->
         </div>
       </div>
     </div>
@@ -47,7 +68,10 @@
       <div class="bg-white rounded-none shadow-md border border-gray-300 p-5">
         <div class="flex items-center justify-between mb-1">
           <div class="text-sm text-gray-600">ออกงานอยู่</div>
-          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-700">ON JOB</span>
+          <span
+            class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-700"
+            >ON JOB</span
+          >
         </div>
         <div class="text-3xl font-bold">{{ onJobCount }}</div>
       </div>
@@ -55,7 +79,10 @@
       <div class="bg-white rounded-none shadow-md border border-gray-300 p-5">
         <div class="flex items-center justify-between mb-1">
           <div class="text-sm text-gray-600">เข้าซ่อมบำรุง</div>
-          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">MAINTENANCE</span>
+        <span
+            class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700"
+            >MAINTENANCE</span
+          >
         </div>
         <div class="text-3xl font-bold">{{ maintenanceCount }}</div>
       </div>
@@ -74,24 +101,28 @@
         <table class="w-full">
           <thead class="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
             <tr>
-              <th class="px-6 py-4 text-left   text-xs font-semibold text-gray-700 uppercase tracking-wider">รหัส/ทะเบียน</th>
-              <th class="px-6 py-4 text-left   text-xs font-semibold text-gray-700 uppercase tracking-wider">รุ่น</th>
-              <th class="px-6 py-4 text-left   text-xs font-semibold text-gray-700 uppercase tracking-wider">คนขับ</th>
-              <th class="px-6 py-4 text-left   text-xs font-semibold text-gray-700 uppercase tracking-wider">ระยะรวม (กม.)</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">รหัส/ทะเบียน</th>
+              <th class="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">รุ่น</th>
+              <th class="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">คนขับ</th>
+              <th class="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">ระยะรวม (กม.)</th>
               <th class="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">ประสิทธิภาพ (กม./ลิตร)</th>
-              <th *ngIf="editingMode" class="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">แก้ไข</th>
+              <th *ngIf="editingMode" class="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <span class="sr-only">จัดการ</span>
+              </th>
             </tr>
           </thead>
 
           <tbody class="divide-y divide-gray-200">
-            <tr *ngFor="let t of filteredTrucks; let i = index"
-                [class.cursor-pointer]="!editingMode"
-                class="hover:bg-gray-50 transition-colors duration-150"
-                (click)="!editingMode && showDetail(t)"
-                (keydown.enter)="!editingMode && showDetail(t)"
-                (keydown.space)="!editingMode && showDetail(t)"
-                tabindex="0" role="button">
-              <!-- รหัส/ทะเบียน -->
+            <tr
+              *ngFor="let t of filteredTrucks; let i = index"
+              [class.cursor-pointer]="!editingMode"
+              class="hover:bg-gray-50 transition-colors duration-150"
+              (click)="!editingMode && showDetail(t)"
+              (keydown.enter)="!editingMode && showDetail(t)"
+              (keydown.space)="!editingMode && showDetail(t)"
+              tabindex="0"
+              role="button"
+            >
               <td class="px-6 py-4">
                 <div class="flex items-center gap-3">
                   <div class="text-sm font-semibold">{{ t.id }}</div>
@@ -100,50 +131,43 @@
                   </span>
                 </div>
               </td>
-
-              <!-- รุ่น -->
-              <td class="px-6 py-4">
-                <span class="text-sm">{{ t.model || '-' }}</span>
-              </td>
-
-              <!-- คนขับ -->
-              <td class="px-6 py-4">
+              <td class="px-6 py-4 text-center"><span class="text-sm">{{ t.model || '-' }}</span></td>
+              <td class="px-6 py-4 text-center">
                 <ng-container *ngIf="t.driver; else noDriver">
                   <span class="text-sm">{{ t.driver?.name }}</span>
                 </ng-container>
                 <ng-template #noDriver>
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
-                    ไม่มีคนขับ
-                  </span>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">ไม่มีคนขับ</span>
                 </ng-template>
               </td>
-
-              <!-- ระยะรวม -->
-              <td class="px-6 py-4"><span class="text-sm">{{ t.totalDistance ?? '-' }}</span></td>
-
-              <!-- ประสิทธิภาพ -->
+              <td class="px-6 py-4 text-center"><span class="text-sm">{{ t.totalDistance ?? '-' }}</span></td>
               <td class="px-6 py-4 text-center"><span class="text-sm">{{ t.efficiencyKmPerL ?? '-' }}</span></td>
-
-              <!-- แก้ไข/ลบ -->
-              <td *ngIf="editingMode" class="px-6 py-4">
+              <td *ngIf="editingMode" class="px-6 py-4 text-center">
                 <div class="flex items-center justify-center gap-2">
-                  <button type="button"
-                          (click)="$event.stopPropagation(); openEditPopupFor(i)"
-                          class="w-8 h-8 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg flex items-center justify-center"
-                          title="แก้ไขรถคันนี้">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                  <button
+                    type="button"
+                    (click)="$event.stopPropagation(); openEditPopupFor(i)"
+                    class="w-8 h-8 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg flex items-center justify-center"
+                    title="แก้ไขรถคันนี้"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
                   </button>
-                  <button type="button"
-                          (click)="$event.stopPropagation(); confirmDelete(i)"
-                          class="w-8 h-8 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg flex items-center justify-center"
-                          title="ลบรถคันนี้">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                  <button
+                    type="button"
+                    (click)="$event.stopPropagation(); confirmDelete(i)"
+                    class="w-8 h-8 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg flex items-center justify-center"
+                    title="ลบรถคันนี้"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1 1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
                   </button>
                 </div>
               </td>
             </tr>
 
-            <!-- Empty -->
             <tr *ngIf="filteredTrucks.length === 0">
               <td [attr.colspan]="editingMode ? 6 : 5" class="px-6 py-16 text-center text-gray-600">
                 ไม่มีข้อมูลรถ — เพิ่มรถคันแรกได้เลย
@@ -155,91 +179,78 @@
     </section>
   </div>
 
-  <!-- ===== Modal: เพิ่มระยะทาง ===== -->
-  <div *ngIf="showDistanceModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] backdrop-blur-sm">
-    <div class="bg-white rounded-none shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-gray-300">
-      <div class="bg-sky-600 px-6 py-4"><h2 class="text-xl font-semibold text-white">เพิ่มระยะทาง (TruckDistanceLog)</h2></div>
-      <form (ngSubmit)="submitDistance()" class="p-6 space-y-4">
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium mb-2">วันที่</label>
-            <input type="date" [(ngModel)]="distanceForm.log_date" name="log_date"
-              class="w-full px-3 py-2.5 border rounded-lg" required>
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-2">รอบที่</label>
-            <input type="number" [(ngModel)]="distanceForm.round_number" name="dist_round" min="1"
-              class="w-full px-3 py-2.5 border rounded-lg" required>
-          </div>
+<!-- ===== Modal: เพิ่มระยะทาง ===== -->
+<div *ngIf="showDistanceModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] backdrop-blur-sm">
+  <div class="bg-white rounded-none shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-gray-300">
+    <div class="bg-sky-600 px-6 py-4"><h2 class="text-xl font-semibold text-white">เพิ่มระยะทาง (TruckDistanceLog)</h2></div>
+    <form (ngSubmit)="submitDistance()" class="p-6 space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium mb-2">วันที่</label>
+          <input type="date" [(ngModel)]="distanceForm.log_date" name="log_date" class="w-full px-3 py-2.5 border rounded-lg" required>
         </div>
         <div>
-          <label class="block text-sm font-medium mb-2">ระยะ (กม.)</label>
-          <input type="number" [(ngModel)]="distanceForm.distance_km" name="distance_km" min="0" step="0.01"
-            class="w-full px-3 py-2.5 border rounded-lg" required>
+          <label class="block text-sm font-medium mb-2">รอบที่</label>
+          <input type="number" [(ngModel)]="distanceForm.round_number" name="dist_round" min="1" class="w-full px-3 py-2.5 border rounded-lg" required>
         </div>
-        <div class="flex gap-3 pt-2">
-          <button type="button" (click)="closeDistanceModal()" class="flex-1 px-4 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200">ยกเลิก</button>
-          <button type="submit" [disabled]="isLoading" class="flex-1 px-4 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white">
-            {{ isLoading ? 'กำลังบันทึก...' : 'บันทึก' }}
-          </button>
-        </div>
-      </form>
-    </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-2">ระยะ (กม.)</label>
+        <input type="number" [(ngModel)]="distanceForm.distance_km" name="distance_km" min="0" step="0.01" class="w-full px-3 py-2.5 border rounded-lg" required>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button type="button" (click)="closeDistanceModal()" class="flex-1 px-4 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200">ยกเลิก</button>
+        <button type="submit" [disabled]="isLoading" class="flex-1 px-4 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white">{{ isLoading ? 'กำลังบันทึก...' : 'บันทึก' }}</button>
+      </div>
+    </form>
   </div>
+</div>
 
-  <!-- ===== Modal: บันทึกน้ำมัน ===== -->
-  <div *ngIf="showFuelModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] backdrop-blur-sm">
-    <div class="bg-white rounded-none shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-gray-300">
-      <div class="bg-emerald-600 px-6 py-4"><h2 class="text-xl font-semibold text-white">บันทึกน้ำมัน (FuelLog)</h2></div>
-      <form (ngSubmit)="submitFuel()" class="p-6 space-y-4">
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium mb-2">วันที่</label>
-            <input type="date" [(ngModel)]="fuelForm.fuel_date" name="fuel_date"
-              class="w-full px-3 py-2.5 border rounded-lg" required>
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-2">รอบที่</label>
-            <input type="number" [(ngModel)]="fuelForm.round_number" name="fuel_round" min="1"
-              class="w-full px-3 py-2.5 border rounded-lg" required>
-          </div>
+<!-- ===== Modal: บันทึกน้ำมัน ===== -->
+<div *ngIf="showFuelModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] backdrop-blur-sm">
+  <div class="bg-white rounded-none shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-gray-300">
+    <div class="bg-emerald-600 px-6 py-4"><h2 class="text-xl font-semibold text-white">บันทึกน้ำมัน (FuelLog)</h2></div>
+    <form (ngSubmit)="submitFuel()" class="p-6 space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium mb-2">วันที่</label>
+          <input type="date" [(ngModel)]="fuelForm.fuel_date" name="fuel_date" class="w-full px-3 py-2.5 border rounded-lg" required>
         </div>
+        <div>
+          <label class="block text-sm font-medium mb-2">รอบที่</label>
+          <input type="number" [(ngModel)]="fuelForm.round_number" name="fuel_round" min="1" class="w-full px-3 py-2.5 border rounded-lg" required>
+        </div>
+      </div>
 
-        <div class="grid grid-cols-3 gap-4">
-          <div>
-            <label class="block text-sm font-medium mb-2">ลิตร</label>
-            <input type="number" [(ngModel)]="fuelForm.liters" name="liters" min="0" step="0.01" (input)="onFuelInputChange()"
-              class="w-full px-3 py-2.5 border rounded-lg" required>
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-2">ราคา/ลิตร</label>
-            <input type="number" [(ngModel)]="fuelForm.price_per_liter" name="price_per_liter" min="0" step="0.01" (input)="onFuelInputChange()"
-              class="w-full px-3 py-2.5 border rounded-lg">
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-2">รวม (บาท)</label>
-            <input type="number" [(ngModel)]="fuelForm.cost" name="cost" min="0" step="0.01"
-              class="w-full px-3 py-2.5 border rounded-lg">
-          </div>
+      <div class="grid grid-cols-3 gap-4">
+        <div>
+          <label class="block text-sm font-medium mb-2">ลิตร</label>
+          <input type="number" [(ngModel)]="fuelForm.liters" name="liters" min="0" step="0.01" (input)="onFuelInputChange()" class="w-full px-3 py-2.5 border rounded-lg" required>
         </div>
+        <div>
+          <label class="block text-sm font-medium mb-2">ราคา/ลิตร</label>
+          <input type="number" [(ngModel)]="fuelForm.price_per_liter" name="price_per_liter" min="0" step="0.01" (input)="onFuelInputChange()" class="w-full px-3 py-2.5 border rounded-lg">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2">รวม (บาท)</label>
+          <input type="number" [(ngModel)]="fuelForm.cost" name="cost" min="0" step="0.01" class="w-full px-3 py-2.5 border rounded-lg">
+        </div>
+      </div>
 
-        <div class="flex gap-3 pt-2">
-          <button type="button" (click)="closeFuelModal()" class="flex-1 px-4 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200">ยกเลิก</button>
-          <button type="submit" [disabled]="isLoading" class="flex-1 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">
-            {{ isLoading ? 'กำลังบันทึก...' : 'บันทึก' }}
-          </button>
-        </div>
-      </form>
-    </div>
+      <div class="flex gap-3 pt-2">
+        <button type="button" (click)="closeFuelModal()" class="flex-1 px-4 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200">ยกเลิก</button>
+        <button type="submit" [disabled]="isLoading" class="flex-1 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">{{ isLoading ? 'กำลังบันทึก...' : 'บันทึก' }}</button>
+      </div>
+    </form>
   </div>
+</div>
+
 
   <!-- ===== Detail Modal ===== -->
   <div *ngIf="showDetailPopup" class="fixed inset-0 bg-black/50 flex justify-center items-center z-50 backdrop-blur-sm">
     <div class="bg-white rounded-none shadow-2xl w-full max-w-3xl mx-4 overflow-hidden border border-gray-300">
       <div class="bg-indigo-600 px-6 py-6">
-        <h2 class="text-2xl font-bold text-white">
-          {{ selectedTruck?.plate }} • {{ selectedTruck?.model || '-' }}
-        </h2>
+        <h2 class="text-2xl font-bold text-white">{{ selectedTruck?.plate }} • {{ selectedTruck?.model || '-' }}</h2>
         <p class="text-indigo-100 text-sm mt-1">รหัสรถ: {{ selectedTruck?.id }}</p>
       </div>
 
@@ -262,31 +273,33 @@
             <div class="text-sm text-gray-600 mb-1">คนขับปัจจุบัน</div>
             <div class="text-lg font-semibold">
               {{ selectedTruck?.driver?.name || 'ไม่มีคนขับ' }}
-              <span class="text-sm text-gray-600 ml-2" *ngIf="selectedTruck?.driver?.phone">
-                ({{ selectedTruck?.driver?.phone }})
-              </span>
+              <span class="text-sm text-gray-600 ml-2" *ngIf="selectedTruck?.driver?.phone">({{ selectedTruck?.driver?.phone }})</span>
             </div>
           </div>
         </div>
 
-        <!-- รายการล่าสุด -->
+        <!-- ล่าสุด + ปุ่มเพิ่มเติม -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- กล่องน้ำมันล่าสุด -->
           <div class="bg-white rounded-none border border-gray-300 overflow-hidden">
-            <div class="px-4 py-3 border-b font-semibold">บันทึกน้ำมันล่าสุด</div>
+            <div class="px-4 py-3 border-b font-semibold flex items-center justify-between">
+              <span>บันทึกน้ำมันล่าสุด</span>
+              <button type="button" class="text-sm text-indigo-600 hover:underline" (click)="openFuelHistory()">เพิ่มเติม</button>
+            </div>
             <div class="p-0 overflow-x-auto">
               <table class="w-full text-sm">
                 <thead class="bg-gray-50">
                   <tr>
                     <th class="px-4 py-2 text-left">วันที่</th>
-                    <th class="px-4 py-2 text-right">ลิตร</th>
-                    <th class="px-4 py-2 text-right">รวม(บาท)</th>
+                    <th class="px-4 py-2 text-center w-24">ลิตร</th>
+                    <th class="px-4 py-2 text-center w-28">รวม(บาท)</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr *ngFor="let r of detailFuelLogs | slice:0:5" class="border-t">
-                    <td class="px-4 py-2">{{ formatDate(r.fuel_date) }}</td>
-                    <td class="px-4 py-2 text-right">{{ r.liters | number:'1.0-2' }}</td>
-                    <td class="px-4 py-2 text-right">{{ r.cost | number:'1.0-2' }}</td>
+                    <td class="px-4 py-2 whitespace-nowrap">{{ formatDate(r.fuel_date) }}</td>
+                    <td class="px-4 py-2 text-center">{{ r.liters | number:'1.0-2' }}</td>
+                    <td class="px-4 py-2 text-center">{{ r.cost | number:'1.0-2' }}</td>
                   </tr>
                   <tr *ngIf="detailFuelLogs.length === 0">
                     <td colspan="3" class="px-4 py-4 text-center text-gray-600">ยังไม่มีข้อมูล</td>
@@ -296,22 +309,26 @@
             </div>
           </div>
 
+          <!-- กล่องระยะทางล่าสุด -->
           <div class="bg-white rounded-none border border-gray-300 overflow-hidden">
-            <div class="px-4 py-3 border-b font-semibold">บันทึกระยะทางล่าสุด</div>
+            <div class="px-4 py-3 border-b font-semibold flex items-center justify-between">
+              <span>บันทึกระยะทางล่าสุด</span>
+              <button type="button" class="text-sm text-indigo-600 hover:underline" (click)="openDistanceHistory()">เพิ่มเติม</button>
+            </div>
             <div class="p-0 overflow-x-auto">
               <table class="w-full text-sm">
                 <thead class="bg-gray-50">
                   <tr>
                     <th class="px-4 py-2 text-left">วันที่</th>
-                    <th class="px-4 py-2 text-right">ระยะ(กม.)</th>
-                    <th class="px-4 py-2 text-right">รอบ</th>
+                    <th class="px-4 py-2 text-center w-28">ระยะ(กม.)</th>
+                    <th class="px-4 py-2 text-center w-16">รอบ</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr *ngFor="let r of detailDistanceLogs | slice:0:5" class="border-t">
-                    <td class="px-4 py-2">{{ formatDate(r.log_date) }}</td>
-                    <td class="px-4 py-2 text-right">{{ r.distance_km | number:'1.0-2' }}</td>
-                    <td class="px-4 py-2 text-right">{{ r.round_number }}</td>
+                    <td class="px-4 py-2 whitespace-nowrap">{{ formatDate(r.log_date) }}</td>
+                    <td class="px-4 py-2 text-center">{{ r.distance_km | number:'1.0-2' }}</td>
+                    <td class="px-4 py-2 text-center">{{ r.round_number }}</td>
                   </tr>
                   <tr *ngIf="detailDistanceLogs.length === 0">
                     <td colspan="3" class="px-4 py-4 text-center text-gray-600">ยังไม่มีข้อมูล</td>
@@ -322,11 +339,18 @@
           </div>
         </div>
 
+        <!-- ปุ่มล่างของ Detail -->
         <div class="flex gap-3 pt-2">
           <button type="button" (click)="closeDetailPopup()" class="flex-1 px-4 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200">ปิด</button>
-          <button type="button" (click)="openMaintModal(selectedTruck!)" class="px-4 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white">ประวัติซ่อม</button>
-          <button type="button" (click)="openDistanceModal(selectedTruck!)" class="px-4 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white">เพิ่มระยะทาง</button>
-          <button type="button" (click)="openFuelModal(selectedTruck!)" class="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">บันทึกน้ำมัน</button>
+          <button type="button" (click)="openMaintModal(selectedTruck!)" class="px-4 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white">
+            ประวัติซ่อม
+          </button>
+          <button type="button" (click)="openDistanceModal(selectedTruck!)" class="px-4 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white">
+            เพิ่มระยะทาง
+          </button>
+          <button type="button" (click)="openFuelModal(selectedTruck!)" class="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">
+            บันทึกน้ำมัน
+          </button>
         </div>
       </div>
     </div>
@@ -335,36 +359,26 @@
   <!-- ===== Modal: ประวัติซ่อมบำรุง ===== -->
   <div *ngIf="showMaintModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[110] backdrop-blur-sm">
     <div class="bg-white rounded-none shadow-2xl w-full max-w-2xl mx-4 overflow-hidden border border-gray-300">
-      <div class="bg-amber-600 px-6 py-4 text-white font-semibold">ประวัติซ่อมบำรุง</div>
+      <div class="bg-orange-600 px-6 py-4 text-white font-semibold">ประวัติซ่อมบำรุง</div>
 
-      <div class="p-6 space-y-4">
-        <form (ngSubmit)="saveMaint()" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+      <div class="p-6 space-y-5">
+        <!-- ฟอร์ม -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label class="block text-sm font-medium mb-1">วันที่</label>
-            <input type="date" [(ngModel)]="maintForm.expense_date" name="m_date"
-                   class="w-full px-3 py-2.5 border rounded-lg" required>
+            <input type="date" [(ngModel)]="maintForm.expense_date" name="m_date" class="w-full px-3 py-2.5 border rounded-lg" required />
           </div>
           <div class="md:col-span-2">
-            <label class="block text-sm font-medium mb-1">รายการ</label>
-            <input type="text" [(ngModel)]="maintForm.description" name="m_desc"
-                   class="w-full px-3 py-2.5 border rounded-lg" required>
+            <label class="block text-sm font-medium mb-1">รายละเอียด</label>
+            <input type="text" [(ngModel)]="maintForm.description" name="m_desc" class="w-full px-3 py-2.5 border rounded-lg" required />
           </div>
           <div>
             <label class="block text-sm font-medium mb-1">จำนวนเงิน</label>
-            <input type="number" step="0.01" min="0" [(ngModel)]="maintForm.amount" name="m_amount"
-                   class="w-full px-3 py-2.5 border rounded-lg" required>
+            <input type="number" step="0.01" min="0" [(ngModel)]="maintForm.amount" name="m_amount" class="w-full px-3 py-2.5 border rounded-lg" required />
           </div>
-          <div class="md:col-span-4 flex justify-end gap-3">
-            <button type="button" (click)="closeMaintModal()"
-                    class="px-4 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200">ปิด
-            </button>
-            <button type="submit" [disabled]="isLoading"
-                    class="px-4 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white">
-              {{ maintForm.id ? 'อัปเดต' : 'เพิ่ม' }}
-            </button>
-          </div>
-        </form>
+        </div>
 
+        <!-- ตาราง -->
         <div class="rounded-none border border-gray-300">
           <div class="max-h-[60vh] overflow-y-auto overflow-x-auto">
             <table class="w-full text-sm">
@@ -383,13 +397,15 @@
                   <td class="px-4 py-2 text-right">{{ r.amount | number:'1.2-2' }}</td>
                   <td class="px-4 py-2">
                     <div class="flex items-center justify-center gap-2">
-                      <button type="button" (click)="editMaint(r)"
-                              class="px-3 py-1 rounded-lg bg-blue-600/10 text-blue-700 hover:bg-blue-600/20">
-                        แก้ไข
+                      <button type="button" (click)="editMaint(r)" class="w-8 h-8 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 flex items-center justify-center" title="แก้ไข">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
                       </button>
-                      <button type="button" (click)="removeMaint(r.id)"
-                              class="px-3 py-1 rounded-lg bg-rose-600/10 text-rose-700 hover:bg-rose-600/20">
-                        ลบ
+                      <button type="button" (click)="openMaintDelete(r)" class="w-8 h-8 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-700 flex items-center justify-center" title="ลบ">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1 1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
                       </button>
                     </div>
                   </td>
@@ -402,76 +418,14 @@
           </div>
         </div>
 
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== Modal: เพิ่ม/แก้ไข รถบรรทุก ===== -->
-  <div *ngIf="showPopup" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[120] backdrop-blur-sm">
-    <div class="bg-white rounded-none shadow-2xl w-full max-w-lg mx-4 overflow-hidden border border-gray-300">
-      <div class="px-6 py-4 bg-indigo-600 text-white">
-        <h3 class="text-xl font-semibold">{{ editingMode ? 'แก้ไขข้อมูลรถ' : 'เพิ่มรถบรรทุก' }}</h3>
-      </div>
-
-      <form (ngSubmit)="submitForm()" class="p-6 space-y-4">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium">ทะเบียน</label>
-            <input type="text" [(ngModel)]="form.plate" name="plate" required
-                   class="w-full px-3 py-2.5 border rounded-lg"/>
-          </div>
-          <div>
-            <label class="block text-sm font-medium">รุ่น</label>
-            <input type="text" [(ngModel)]="form.model" name="model"
-                   class="w-full px-3 py-2.5 border rounded-lg"/>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium">ระยะรวม (กม.)</label>
-            <input type="number" [(ngModel)]="form.totalDistance" name="total_distance" min="0" step="1"
-                   class="w-full px-3 py-2.5 border rounded-lg"/>
-          </div>
-          <div>
-            <label class="block text-sm font-medium">ประสิทธิภาพ (กม./ลิตร)</label>
-            <input type="number" [(ngModel)]="form.efficiencyKmPerL" name="eff_km_per_l" min="0" step="0.01"
-                   class="w-full px-3 py-2.5 border rounded-lg"/>
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium">คนขับ</label>
-          <select
-            [ngModel]="form.driver?.id ?? null"
-            (ngModelChange)="onSelectDriver($event)"
-            name="current_driver_id"
-            class="w-full px-3 py-2.5 border rounded-lg">
-            <option [ngValue]="null">— ไม่มีคนขับ —</option>
-            <option
-              *ngFor="let d of drivers"
-              [ngValue]="d.id"
-              [disabled]="isDriverTaken(d.id) && d.id !== form.driver?.id">
-              {{ d.name }}{{ d.phone ? ' ('+d.phone+')' : '' }}
-              <span *ngIf="isDriverTaken(d.id) && d.id !== form.driver?.id"> — ถูกใช้งาน</span>
-            </option>
-          </select>
-          <p class="text-xs text-amber-600 mt-1" *ngIf="blockedDriverIds.size > 0">
-            รายชื่อที่เป็นสีเทาถูกใช้งานอยู่กับรถคันอื่น
-          </p>
-        </div>
-
-        <div class="flex gap-3 pt-2">
-          <button type="button" (click)="closePopup()"
-                  class="flex-1 px-4 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200">
-            ยกเลิก
-          </button>
-          <button type="submit" [disabled]="isLoading"
-                  class="flex-1 px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white">
-            {{ isLoading ? 'กำลังบันทึก...' : 'บันทึก' }}
+        <!-- ปุ่มล่าง -->
+        <div class="grid grid-cols-2 gap-4 pt-2">
+          <button type="button" (click)="closeMaintModal()" class="w-full h-12 rounded-xl border border-gray-300 bg-white text-gray-800 font-semibold hover:bg-gray-50">ปิด</button>
+          <button type="button" (click)="saveMaint()" [disabled]="isLoading" class="w-full h-12 rounded-xl bg-amber-600 text-white font-semibold hover:bg-amber-700 disabled:opacity-60">
+            {{ isLoading ? 'กำลังบันทึก...' : (maintForm.id ? 'อัปเดต' : 'เพิ่ม') }}
           </button>
         </div>
-      </form>
+      </div>
     </div>
   </div>
 
@@ -480,7 +434,7 @@
     <div class="font-semibold">{{ toastMessage }}</div>
   </div>
 
-  <!-- Confirm Delete -->
+  <!-- Confirm Delete Truck -->
   <div *ngIf="showDeleteConfirm && deleteIndex !== null" class="fixed inset-0 bg-black/50 flex justify-center items-center z-[140] backdrop-blur-sm">
     <div class="bg-white rounded-none shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-gray-300">
       <div class="p-6">
@@ -495,4 +449,241 @@
       </div>
     </div>
   </div>
+
+  <!-- Confirm Delete Maintenance -->
+  <div *ngIf="showMaintDelete && maintDeleteTarget" class="fixed inset-0 bg-black/50 flex justify-center items-center z-[145] backdrop-blur-sm">
+    <div class="bg-white rounded-none shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-gray-300">
+      <div class="p-6">
+        <h2 class="text-xl font-semibold text-center mb-2">ยืนยันการลบรายการซ่อม</h2>
+        <p class="text-center text-gray-700 mb-6">ต้องการลบรายการวันที่ <b>{{ formatDate(maintDeleteTarget.expense_date) }}</b> ใช่หรือไม่?</p>
+        <div class="flex gap-3">
+          <button type="button" (click)="closeMaintDelete()" class="flex-1 px-4 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200">ยกเลิก</button>
+          <button type="button" (click)="confirmMaintDelete()" [disabled]="isLoading" class="flex-1 px-4 py-2.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white">
+            {{ isLoading ? 'กำลังลบ...' : 'ลบรายการ' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<!-- ===== Modal: ประวัติน้ำมันทั้งหมด ===== -->
+<div *ngIf="showFuelHistory"
+     class="fixed inset-0 bg-black/50 flex items-center justify-center z-[115] backdrop-blur-sm">
+  <div class="bg-white rounded-none shadow-2xl w-full max-w-3xl mx-4 overflow-hidden border border-gray-300">
+    <div class="bg-emerald-600 px-6 py-4 text-white font-semibold flex items-center justify-between">
+      <span>ประวัติน้ำมันทั้งหมด</span>
+      <button class="text-white/90 hover:text-white text-sm underline"
+              (click)="showFuelHistory=false">ปิด</button>
+    </div>
+
+    <div class="p-0 max-h-[70vh] overflow-y-auto overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="sticky top-0 bg-gray-50">
+          <tr>
+            <th class="px-4 py-3 text-left  w-36">วันที่</th>
+            <th class="px-4 py-3 text-center w-20">รอบ</th>
+            <th class="px-4 py-3 text-right  w-28">ลิตร</th>
+            <th class="px-4 py-3 text-right  w-28">รวม(บาท)</th>
+            <th class="px-4 py-3 text-center w-28">จัดการ</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of fuelHistory" class="border-t">
+            <td class="px-4 py-2">{{ formatDate(r.fuel_date) }}</td>
+            <td class="px-4 py-2 text-center">{{ r.round_number }}</td>
+            <td class="px-4 py-2 text-right">{{ r.liters | number:'1.0-2' }}</td>
+            <td class="px-4 py-2 text-right">{{ r.cost   | number:'1.0-2' }}</td>
+            <td class="px-4 py-2">
+              <div class="flex items-center justify-center gap-2">
+                <button class="w-8 h-8 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 flex items-center justify-center"
+                        title="แก้ไข" (click)="editFuel(r)">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                  </svg>
+                </button>
+                <button class="w-8 h-8 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-700 flex items-center justify-center"
+                        title="ลบ" (click)="openFuelDelete(r)">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="!fuelHistory || fuelHistory.length === 0">
+            <td colspan="5" class="px-4 py-6 text-center text-gray-600">ยังไม่มีประวัติ</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal: ประวัติระยะทางทั้งหมด ===== -->
+<div *ngIf="showDistanceHistory"
+     class="fixed inset-0 bg-black/50 flex items-center justify-center z-[116] backdrop-blur-sm">
+  <div class="bg-white rounded-none shadow-2xl w-full max-w-3xl mx-4 overflow-hidden border border-gray-300">
+    <div class="bg-sky-600 px-6 py-4 text-white font-semibold flex items-center justify-between">
+      <span>ประวัติระยะทางทั้งหมด</span>
+      <button class="text-white/90 hover:text-white text-sm underline"
+              (click)="showDistanceHistory=false">ปิด</button>
+    </div>
+
+    <div class="p-0 max-h-[70vh] overflow-y-auto overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="sticky top-0 bg-gray-50">
+          <tr>
+            <th class="px-4 py-3 text-left  w-36">วันที่</th>
+            <th class="px-4 py-3 text-center w-20">รอบ</th>
+            <th class="px-4 py-3 text-right  w-28">ระยะ(กม.)</th>
+            <th class="px-4 py-3 text-center w-28">จัดการ</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of distanceHistory" class="border-t">
+            <td class="px-4 py-2">{{ formatDate(r.log_date) }}</td>
+            <td class="px-4 py-2 text-center">{{ r.round_number }}</td>
+            <td class="px-4 py-2 text-right">{{ r.distance_km | number:'1.0-2' }}</td>
+            <td class="px-4 py-2">
+              <div class="flex items-center justify-center gap-2">
+                <button class="w-8 h-8 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 flex items-center justify-center"
+                        title="แก้ไข" (click)="editDistance(r)">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                  </svg>
+                </button>
+                <button class="w-8 h-8 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-700 flex items-center justify-center"
+                        title="ลบ" (click)="openDistanceDelete(r)">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1 1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="!distanceHistory || distanceHistory.length === 0">
+            <td colspan="4" class="px-4 py-6 text-center text-gray-600">ยังไม่มีประวัติ</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Confirm Delete: Fuel ===== -->
+<div *ngIf="showFuelDeleteConfirm" class="fixed inset-0 z-[140] flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+
+  <div class="relative bg-white w-full max-w-md mx-4 rounded-2xl shadow-2xl border border-gray-200 p-6">
+    <h3 class="text-xl font-bold text-center mb-2">ยืนยันการลบรายการน้ำมัน</h3>
+    <p class="text-center text-gray-700 mb-6">
+      ต้องการลบรายการวันที่
+      <b>{{ formatDate(fuelDeleteTarget?.fuel_date) }}</b>
+      (รอบ {{ fuelDeleteTarget?.round_number }}) ใช่หรือไม่?
+    </p>
+
+    <div class="grid grid-cols-2 gap-3">
+      <button type="button"
+              class="h-11 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 font-semibold"
+              (click)="closeFuelDelete()">
+        ยกเลิก
+      </button>
+      <button type="button"
+              class="h-11 rounded-xl bg-rose-600 text-white hover:bg-rose-700 font-semibold disabled:opacity-60"
+              [disabled]="isLoading"
+              (click)="confirmFuelDelete()">
+        {{ isLoading ? 'กำลังลบ...' : 'ลบรายการ' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Confirm Delete: Distance ===== -->
+<div *ngIf="showDistanceDeleteConfirm" class="fixed inset-0 z-[141] flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+
+  <div class="relative bg-white w-full max-w-md mx-4 rounded-2xl shadow-2xl border border-gray-200 p-6">
+    <h3 class="text-xl font-bold text-center mb-2">ยืนยันการลบรายการระยะทาง</h3>
+    <p class="text-center text-gray-700 mb-6">
+      ต้องการลบรายการวันที่
+      <b>{{ formatDate(distanceDeleteTarget?.log_date) }}</b>
+      (รอบ {{ distanceDeleteTarget?.round_number }}) ใช่หรือไม่?
+    </p>
+
+    <div class="grid grid-cols-2 gap-3">
+      <button type="button"
+              class="h-11 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 font-semibold"
+              (click)="closeDistanceDelete()">
+        ยกเลิก
+      </button>
+      <button type="button"
+              class="h-11 rounded-xl bg-rose-600 text-white hover:bg-rose-700 font-semibold disabled:opacity-60"
+              [disabled]="isLoading"
+              (click)="confirmDistanceDelete()">
+        {{ isLoading ? 'กำลังลบ...' : 'ลบรายการ' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== Modal: เพิ่ม/แก้ไข รถบรรทุก ===== -->
+<div *ngIf="showPopup" class="fixed inset-0 z-[180]">
+  <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" (click)="closePopup()"></div>
+
+  <div class="relative bg-white w-full max-w-lg mx-auto mt-16 rounded-none shadow-2xl border border-gray-300">
+    <div class="px-6 py-4 border-b bg-indigo-600 text-white">
+      <div class="text-lg font-semibold">
+        {{ editingMode ? 'แก้ไขรถบรรทุก' : 'เพิ่มรถบรรทุก' }}
+      </div>
+    </div>
+
+    <form class="p-6 space-y-4" (ngSubmit)="submitForm()">
+      <div>
+        <label class="block text-sm mb-1">ทะเบียนรถ</label>
+        <input type="text" [(ngModel)]="form.plate" name="plate"
+               class="w-full px-3 py-2.5 border rounded-lg" required />
+      </div>
+
+      <div>
+        <label class="block text-sm mb-1">รุ่น</label>
+        <input type="text" [(ngModel)]="form.model" name="model"
+               class="w-full px-3 py-2.5 border rounded-lg" />
+      </div>
+
+
+      <div>
+        <label class="block text-sm mb-1">คนขับ (ถ้ามี)</label>
+        <select
+          [ngModel]="form.driver?.id || ''"
+          (ngModelChange)="onSelectDriver($event || null)"
+          name="driverId"
+          class="w-full px-3 py-2.5 border rounded-lg">
+          <option [ngValue]="''">— ไม่ระบุ —</option>
+          <option *ngFor="let d of drivers"
+                  [ngValue]="d.id"
+                  [disabled]="isDriverTaken(d.id)">
+            {{ d.name }} <span *ngIf="isDriverTaken(d.id)">&nbsp;• ถูกใช้งานแล้ว</span>
+          </option>
+        </select>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 pt-2">
+        <button type="button" (click)="closePopup()"
+                class="h-11 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 font-semibold">
+          ยกเลิก
+        </button>
+        <button type="submit" [disabled]="isLoading"
+                class="h-11 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 font-semibold">
+          {{ isLoading ? 'กำลังบันทึก...' : (editingMode ? 'อัปเดต' : 'เพิ่มรถ') }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+

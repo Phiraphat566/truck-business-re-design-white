@@ -1,7 +1,16 @@
+// backend/controllers/jobAssignmentController.js
 import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 /* ---------- helpers ---------- */
+
+function todayYMDLocal() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
 
 async function nextJobId() {
   const rows = await prisma.jobAssignment.findMany({ select: { id: true } });
@@ -14,23 +23,67 @@ async function nextJobId() {
 }
 
 function rangeOfDateLocal(ymd) {
-  if (!ymd) {
-    const now = new Date();
-    const s = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0,0,0,0);
-    const e = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23,59,59,999);
-    return { start: s, end: e };
-  }
-  const [y,m,d] = ymd.split('-').map(Number);
-  const s = new Date(y, (m||1)-1, d||1, 0,0,0,0);
-  const e = new Date(y, (m||1)-1, d||1, 23,59,59,999);
+  const base = ymd
+    ? (() => {
+        const [y, m, d] = ymd.split('-').map(Number);
+        return new Date(y, (m || 1) - 1, d || 1);
+      })()
+    : new Date();
+
+  const s = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 0, 0, 0, 0);
+  const e = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 23, 59, 59, 999);
   return { start: s, end: e };
 }
 
 function dateOnly(d) {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0,0,0,0);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+}
+
+// ตรวจว่ามีงานค้างของพนักงาน (ยังไม่ completed) ในวันเดียวกันอยู่หรือไม่
+async function findOpenJobToday(employeeId, assignedDate) {
+  const start = new Date(`${assignedDate}T00:00:00`);
+  const end = new Date(`${assignedDate}T23:59:59.999`);
+  return prisma.jobAssignment.findFirst({
+    where: {
+      employee_id: employeeId,
+      assigned_date: { gte: start, lte: end },
+      completed_at: null,
+    },
+    orderBy: [{ assigned_date: 'desc' }, { id: 'desc' }],
+  });
 }
 
 /* ---------- CRUD / LIST ---------- */
+
+// POST /api/job-assignments
+export const create = async (req, res) => {
+  try {
+    const { employeeId, description, assignedDate, source } = req.body;
+
+    // กันสร้างซ้อน
+    const open = await findOpenJobToday(employeeId, assignedDate);
+    if (open) {
+      return res.status(409).json({
+        error: 'พนักงานมีงานค้างอยู่แล้วในวันนี้ กรุณาจบงานเดิมก่อน',
+        openId: open.id,
+      });
+    }
+
+    const job = await prisma.jobAssignment.create({
+      data: {
+        employee_id: employeeId,
+        job_description: description,
+        assigned_date: new Date(`${assignedDate}T00:00:00`),
+        source: source ?? 'MANUAL',
+      },
+    });
+
+    res.json(job);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'สร้างงานไม่สำเร็จ' });
+  }
+};
 
 // GET /api/job-assignments?employeeId=&from=&to=&q=&status=accepted|pending&includeCompleted=0|1
 export const getAllJobAssignments = async (req, res) => {
@@ -43,14 +96,14 @@ export const getAllJobAssignments = async (req, res) => {
     if (from || to) {
       where.assigned_date = {};
       if (from) where.assigned_date.gte = new Date(`${from}T00:00:00`);
-      if (to)   where.assigned_date.lte = new Date(`${to}T23:59:59.999`);
+      if (to) where.assigned_date.lte = new Date(`${to}T23:59:59.999`);
     }
     if (status) {
       const s = String(status).toLowerCase();
       if (s === 'accepted') where.accepted_at = { not: null };
       else if (s === 'pending') where.accepted_at = null;
     }
-    // ✅ เริ่มต้นกรอง “ยังไม่เสร็จ” เว้นแต่จะส่ง includeCompleted=1 มา
+    // เริ่มต้นกรอง “ยังไม่เสร็จ” เว้นแต่ includeCompleted=1
     if (!includeCompleted || includeCompleted === '0') {
       where.completed_at = null;
     }
@@ -157,12 +210,12 @@ export const deleteJobAssignment = async (req, res) => {
 export const latestByDate = async (req, res) => {
   try {
     const { date, includeCompleted } = req.query || {};
-    const { start, end } = rangeOfDateLocal(date);
+    const ymd = date || todayYMDLocal();
+    const start = new Date(`${ymd}T00:00:00`);
+    const end = new Date(`${ymd}T23:59:59.999`);
 
     const where = { assigned_date: { gte: start, lte: end } };
-    if (!includeCompleted || includeCompleted === '0') {
-      where.completed_at = null;
-    }
+    if (!includeCompleted || includeCompleted === '0') where.completed_at = null;
 
     const rows = await prisma.jobAssignment.findMany({
       where,
@@ -178,19 +231,23 @@ export const latestByDate = async (req, res) => {
         assigned_date: true,
         source: true,
         accepted_at: true,
-        completed_at: true,      // ✅ ส่งกลับเพื่อเช็คฝั่ง UI
+        completed_at: true,
       },
     });
 
+    // เลือกล่าสุดของแต่ละพนักงาน
     const pick = new Map();
-    for (const r of rows) {
-      if (!pick.has(r.employee_id)) pick.set(r.employee_id, r);
-    }
+    for (const r of rows) if (!pick.has(r.employee_id)) pick.set(r.employee_id, r);
 
-    const result = Array.from(pick.entries()).map(([employee_id, assignment]) => ({
-      employee_id,
-      assignment,
-    }));
+    const result = Array.from(pick.entries()).map(([employee_id, assignment]) => {
+      let status = 'FREE';
+      if (assignment) {
+        if (assignment.completed_at) status = 'FREE';
+        else if (assignment.accepted_at) status = 'IN_PROGRESS';
+        else status = 'PENDING';
+      }
+      return { employee_id, status, assignment };
+    });
 
     res.json(result);
   } catch (e) {
@@ -202,26 +259,19 @@ export const latestByDate = async (req, res) => {
 // POST /api/job-assignments/accept
 export const acceptLatestForEmployee = async (req, res) => {
   try {
-    const { employeeId, date } = req.body || {};
-    if (!employeeId) return res.status(400).json({ error: 'employeeId required' });
+    const employeeId = (req.body?.employeeId || '').toUpperCase();
+    const date = req.body?.date || undefined; // ถ้าไม่ส่งมา จะใช้วันนี้ใน core
 
-    const { start, end } = rangeOfDateLocal(date);
-    const latest = await prisma.jobAssignment.findFirst({
-      where: { employee_id: String(employeeId), assigned_date: { gte: start, lte: end }, completed_at: null },
-      orderBy: [{ assigned_date: 'desc' }, { id: 'desc' }],
-      select: { id: true },
-    });
-    if (!latest) return res.status(404).json({ error: 'No active job for that date' });
+    const result = await acceptLatestForEmployeeCore(employeeId, date);
 
-    const updated = await prisma.jobAssignment.update({
-      where: { id: latest.id },
-      data: { accepted_at: new Date(), source: 'LINE' },
-    });
+    if (!result.ok && result.error === 'NOT_FOUND') {
+      return res.status(404).json({ error: 'ไม่พบนัดหมายงานของวันนี้' });
+    }
 
-    res.json({ ok: true, updated });
+    return res.json(result);
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: 'Accept failed' });
+    return res.status(500).json({ error: 'รับงานไม่สำเร็จ' });
   }
 };
 
@@ -252,7 +302,7 @@ export const historyForEmployee = async (req, res) => {
     if (from || to) {
       where.assigned_date = {};
       if (from) where.assigned_date.gte = new Date(`${from}T00:00:00`);
-      if (to)   where.assigned_date.lte = new Date(`${to}T23:59:59.999`);
+      if (to) where.assigned_date.lte = new Date(`${to}T23:59:59.999`);
     }
 
     const rows = await prisma.jobAssignment.findMany({
@@ -265,7 +315,7 @@ export const historyForEmployee = async (req, res) => {
         assigned_date: true,
         source: true,
         accepted_at: true,
-        completed_at: true,     // ✅
+        completed_at: true,
       },
     });
 
@@ -298,21 +348,21 @@ export const completeJobById = async (req, res) => {
     try {
       const workDate = dateOnly(new Date(job.assigned_date));
 
-      // อัปเดตถ้ามี
       const upd = await prisma.employeeDayStatus.updateMany({
         where: { employee_id: job.employee_id, work_date: workDate },
         data: { status: 'OFF_DUTY', source: 'MANUAL' },
       });
 
-      // ถ้ายังไม่มี ให้สร้าง (และกันชนเคสชนซ้ำด้วย skipDuplicates)
       if (upd.count === 0) {
         await prisma.employeeDayStatus.createMany({
-          data: [{
-            employee_id: job.employee_id,
-            work_date: workDate,
-            status: 'OFF_DUTY',
-            source: 'MANUAL',
-          }],
+          data: [
+            {
+              employee_id: job.employee_id,
+              work_date: workDate,
+              status: 'OFF_DUTY',
+              source: 'MANUAL',
+            },
+          ],
           skipDuplicates: true,
         });
       }
@@ -328,6 +378,46 @@ export const completeJobById = async (req, res) => {
     return res.status(500).json({ error: 'Complete failed' });
   }
 };
+
+// ฟังก์ชัน core สำหรับรับงาน (ใช้ในไลน์)
+export async function acceptLatestForEmployeeCore(employeeId, dateStr) {
+  const { start, end } = rangeOfDateLocal(dateStr);
+
+  // 1) ถ้ามีงานที่ "รับแล้วและยังไม่จบ" อยู่ในวันนี้ → ห้ามรับซ้ำ
+  const inProgress = await prisma.jobAssignment.findFirst({
+    where: {
+      employee_id: employeeId,
+      assigned_date: { gte: start, lte: end },
+      accepted_at: { not: null },
+      completed_at: null,
+    },
+    orderBy: { id: 'desc' },
+  });
+  if (inProgress) {
+    return { ok: false, error: 'ALREADY_IN_PROGRESS', current: inProgress };
+  }
+
+  // 2) หา "งานที่ยังไม่รับ (pending) และยังไม่จบ" ล่าสุดของวันนี้
+  const open = await prisma.jobAssignment.findFirst({
+    where: {
+      employee_id: employeeId,
+      assigned_date: { gte: start, lte: end },
+      accepted_at: null,
+      completed_at: null,
+    },
+    orderBy: { id: 'desc' },
+  });
+
+  if (!open) return { ok: false, error: 'NOT_FOUND' };
+
+  // 3) mark accept
+  const updated = await prisma.jobAssignment.update({
+    where: { id: open.id },
+    data: { accepted_at: new Date() },
+  });
+
+  return { ok: true, updated };
+}
 
 // PATCH /api/job-assignments/:id/reopen
 export const reopenJobById = async (req, res) => {

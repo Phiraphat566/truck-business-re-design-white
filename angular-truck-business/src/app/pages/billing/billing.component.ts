@@ -507,13 +507,79 @@ openMonthDetail(year: number, monthName: string) {
       description: inv.description ?? ''
     };
   }
-  confirmDelete(inv: Invoice) {
-    if (!confirm(`ลบใบแจ้งหนี้เลขที่ ${inv.invoiceNo} ?`)) return;
-    this.http.delete(`/api/invoices/${inv.id}`).subscribe({
-      next: () => { this.loadChartYear(this.selectedYear); this.loadCurrentMonthDetail(); },
-      error: (err) => { alert(err?.error?.message || 'ลบไม่สำเร็จ'); }
-    });
-  }
+confirmDelete(doc: Invoice) {
+  this.openDeleteModal(doc);
+}
+// ===== Confirm Delete (รายรับ) =====
+deleteConfirmOpen = false;
+deleteTarget: Invoice | null = null;
+
+openDeleteModal(doc: Invoice) {
+  this.deleteTarget = doc;
+  this.deleteConfirmOpen = true;
+}
+
+closeDeleteModal() {
+  this.deleteConfirmOpen = false;
+  this.deleteTarget = null;
+}
+
+/** ลบรายการจริง ๆ จากโมดัล */
+confirmDeleteNow() {
+  if (!this.deleteTarget) return;
+  this.isLoading = true;
+
+  this.http.delete(`/api/invoices/${this.deleteTarget.id}`).subscribe({
+    next: () => {
+      // ตัดรายการออกจากตารางปัจจุบัน
+      this.invoicesOfMonth = this.invoicesOfMonth.filter(x => x.id !== this.deleteTarget!.id);
+      // รีโหลดยอดสรุปกราฟปี
+      this.loadChartYear(this.selectedYear);
+      this.isLoading = false;
+      this.closeDeleteModal();
+    },
+    error: (err) => {
+      this.apiError = err?.error?.message || 'ลบไม่สำเร็จ';
+      this.isLoading = false;
+      this.closeDeleteModal();
+    }
+  });
+}
+
+
+// ===== Confirm Delete (Payroll) =====
+payrollDeleteOpen = false;
+payrollDeleteTarget: PayrollItem | null = null;
+
+openPayrollDeleteModal(item: PayrollItem) {
+  this.payrollDeleteTarget = item;
+  this.payrollDeleteOpen = true;
+}
+
+closePayrollDeleteModal() {
+  this.payrollDeleteOpen = false;
+  this.payrollDeleteTarget = null;
+}
+
+confirmPayrollDeleteNow() {
+  if (!this.payrollDeleteTarget) return;
+  this.isLoading = true;
+
+  this.http.delete(`/api/payroll/items/${this.payrollDeleteTarget.id}`).subscribe({
+    next: () => {
+      this.isLoading = false;
+      this.closePayrollDeleteModal();
+      this.loadPayrollForCurrentMonth();
+      this.loadChartYear(this.selectedYear);
+    },
+    error: (err) => {
+      this.isLoading = false;
+      this.apiError = err?.error?.message || 'ลบไม่สำเร็จ';
+      this.closePayrollDeleteModal();
+    }
+  });
+}
+
   addBill(year: number, monthName: string) {
     const idx = this.months.indexOf(monthName); if (idx >= 0) this.chartMonthIndex = idx;
     const yyyy = year; const start = new Date(yyyy, this.chartMonthIndex, 1); const end = new Date(yyyy, this.chartMonthIndex + 1, 0);

@@ -8,11 +8,10 @@
     <main class="w-full max-w-xl rounded-2xl bg-white/90 backdrop-blur-md shadow-[0_20px_60px_rgba(0,0,0,0.35)] ring-1 ring-white/40">
       <!-- หัวการ์ด -->
       <div class="px-8 pt-10 pb-6 text-center">
-        <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-white font-bold">
-          TB
-        </div>
         <h1 class="text-2xl font-bold text-slate-900">เข้าสู่ระบบ</h1>
-        <p class="mt-1 text-sm text-slate-500">กรอกชื่อผู้ใช้และรหัสผ่านเพื่อเข้าใช้งานระบบ</p>
+        <p class="mt-1 text-sm text-slate-500">
+          {{ mode === 'normal' ? 'กรอกชื่อผู้ใช้และรหัสผ่านเพื่อเข้าใช้งานระบบ' : 'ใช้รหัสกู้คืนเข้าสู่ระบบชั่วคราว แล้วไปตั้งรหัสใหม่' }}
+        </p>
       </div>
 
       <!-- แจ้ง error -->
@@ -30,9 +29,9 @@
               <!-- ไอคอน user -->
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"
-                  d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+                      d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"
-                  d="M4.5 19.5a7.5 7.5 0 0115 0" />
+                      d="M4.5 19.5a7.5 7.5 0 0115 0"/>
               </svg>
             </span>
             <input
@@ -47,16 +46,16 @@
           </div>
         </div>
 
-        <!-- Password -->
-        <div>
+        <!-- Password (โหมดปกติ) -->
+        <div *ngIf="mode === 'normal'">
           <label class="mb-1 block text-xs font-medium text-slate-500">Password</label>
           <div class="relative">
             <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center">
               <!-- ไอคอน lock -->
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"
-                  d="M16.5 10.5V7.5a4.5 4.5 0 10-9 0v3" />
-                <rect x="4.5" y="10.5" width="15" height="9" rx="2" ry="2" stroke-width="1.6" />
+                      d="M16.5 10.5V7.5a4.5 4.5 0 10-9 0v3"/>
+                <rect x="4.5" y="10.5" width="15" height="9" rx="2" ry="2" stroke-width="1.6"/>
               </svg>
             </span>
 
@@ -72,11 +71,29 @@
             />
 
             <button type="button"
-              class="absolute inset-y-0 right-2 my-1 px-3 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100"
-              (click)="toggleShow()">
+                    class="absolute inset-y-0 right-2 my-1 px-3 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100"
+                    (click)="toggleShow()">
               {{ showPassword ? 'ซ่อน' : 'แสดง' }}
             </button>
           </div>
+        </div>
+
+        <!-- Recovery Code (โหมดกู้คืน) -->
+        <div *ngIf="mode === 'recovery'">
+          <label class="mb-1 block text-xs font-medium text-slate-500">Recovery Code</label>
+          <input
+            class="w-full h-11 px-3 rounded-xl border border-slate-300 bg-white text-sm outline-none
+                   focus:border-indigo-400 focus:ring-4 focus:ring-indigo-200 transition"
+            type="text"
+            [(ngModel)]="recoveryCode"
+            name="recoveryCode"
+            placeholder="เช่น 9XCF3J7KQZ"
+            (keydown.enter)="login()"
+            required
+          />
+          <p class="mt-1 text-xs text-slate-500">
+            ใช้รหัสกู้คืนที่หัวหน้าหรือผู้ดูแลสร้างให้ชั่วคราว เพื่อตั้งรหัสผ่านใหม่หลังเข้าสู่ระบบ
+          </p>
         </div>
 
         <!-- Options -->
@@ -86,7 +103,12 @@
                    class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
             จำการเข้าสู่ระบบ
           </label>
-          <a class="text-sm font-medium text-indigo-700 hover:underline" href="#">ลืมรหัสผ่าน?</a>
+
+          <button type="button"
+                  class="text-sm text-indigo-600 hover:underline"
+                  (click)="toggleMode()">
+            {{ mode === 'normal' ? 'ลืมรหัส? ใช้รหัสกู้คืน' : 'กลับไปใช้รหัสผ่าน' }}
+          </button>
         </div>
 
         <!-- ปุ่ม Login -->
@@ -95,13 +117,15 @@
                  bg-indigo-600 text-white font-semibold shadow-sm hover:bg-indigo-700
                  focus:outline-none focus:ring-4 focus:ring-indigo-300 disabled:opacity-60 transition"
           type="submit"
-          [disabled]="loading || !username || !password">
+          [disabled]="loading || !username || (mode==='normal' ? !password : !recoveryCode)">
           <svg *ngIf="loading" class="h-5 w-5 animate-spin" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
-            <path class="opacity-75" fill="currentColor"
-              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
           </svg>
-          <span>{{ loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ' }}</span>
+          <span>
+            {{ loading ? 'กำลังเข้าสู่ระบบ...'
+                       : (mode==='normal' ? 'เข้าสู่ระบบ' : 'เข้าสู่ระบบด้วยรหัสกู้คืน') }}
+          </span>
         </button>
 
         <!-- หมายเหตุเล็ก ๆ -->
@@ -113,7 +137,7 @@
 
     <!-- เครดิตเล็กน้อยด้านล่าง -->
     <p class="mt-6 text-xs text-white/60">
-  © {{ currentYear }} Truck Business. All rights reserved.
-</p>
+      © {{ currentYear }} Truck Business. All rights reserved.
+    </p>
   </div>
 </div>

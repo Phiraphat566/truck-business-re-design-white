@@ -6,30 +6,33 @@ const prisma = new PrismaClient();
 const num = (v) => (v == null ? null : Number(v));
 
 /** ใช้ตอน list: สร้างออปเจ็กต์รถจากค่าที่สรุปจาก Log แล้ว */
-const mapTruckFromComputed = (t, distance, liters) => {
-  const eff =
-    liters > 0
-      ? Number((distance / liters).toFixed(1))
-      : t.fuel_efficiency_km_per_liter == null
-        ? null
-        : Number(t.fuel_efficiency_km_per_liter);
+const mapTruckFromComputed = (t, distance, liters) => ({
+  truck_id: t.id,    // ใช้ id เหมือนเดิม
+  // truck_code: t.truck_code, // (ถ้าจะไม่ใช้ ก็ไม่ต้องส่ง)
+  plate: t.plate,
+  model: t.model ?? null,
+  total_distance: Number(distance || 0),
+  fuel_efficiency_km_per_liter:
+    liters > 0 ? Number((distance / liters).toFixed(1))
+               : t.fuel_efficiency_km_per_liter == null ? null : Number(t.fuel_efficiency_km_per_liter),
+  currentDriver: t.currentDriver ? { id: t.currentDriver.id, name: t.currentDriver.name, phone: t.currentDriver.phone ?? null } : null,
+});
 
-  return {
-    truck_id: t.id,
-    plate: t.plate,
-    model: t.model ?? null,
+// helpers/truck-id.ts (หรือวางไว้บนสุดของ controller)
+async function genTruckId() {
+  // อ่านเฉพาะคอลัมน์ id ทั้งหมด
+  const rows = await prisma.truck.findMany({ select: { id: true } });
 
-    // ระยะรวมมาจาก SUM ของ TruckDistanceLog
-    total_distance: Number(distance || 0),
+  // หาเลขมากสุดจาก pattern TRK-###
+  let max = 0;
+  for (const r of rows) {
+    const m = /^TRK-(\d+)$/.exec(String(r.id || ''));
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
+  return `TRK-${String(max + 1).padStart(3, '0')}`;
+}
 
-    // ถ้ามีลิตรจาก log ค่อยคำนวณใหม่ ไม่งั้น fallback ค่าที่บันทึกไว้ในตาราง Truck
-    fuel_efficiency_km_per_liter: eff,
 
-    currentDriver: t.currentDriver
-      ? { id: t.currentDriver.id, name: t.currentDriver.name, phone: t.currentDriver.phone ?? null }
-      : null,
-  };
-};
 
 /** ดึงสรุประยะ/ลิตรจาก Log ของรถหนึ่งคัน */
 const getComputedFromLogs = async (truckId) => {
@@ -55,7 +58,7 @@ export const listTrucks = async (_req, res) => {
     const [trucks, distGroup, fuelGroup] = await Promise.all([
       prisma.truck.findMany({
         include: { currentDriver: { select: { id: true, name: true, phone: true } } },
-        orderBy: [{ plate: 'asc' }],
+        orderBy: [{ id: 'asc' }],
       }),
       prisma.truckDistanceLog.groupBy({
         by: ['truck_id'],
@@ -81,20 +84,21 @@ export const listTrucks = async (_req, res) => {
   }
 };
 
+
 // POST /api/trucks
 export const createTruck = async (req, res) => {
   try {
-    const { truck_id, plate, model, total_distance, fuel_efficiency_km_per_liter, current_driver_id } = req.body;
+    const { plate, model, total_distance, fuel_efficiency_km_per_liter, current_driver_id } = req.body;
     if (!plate) return res.status(400).json({ message: 'plate is required' });
 
-    const id = truck_id && String(truck_id).trim() ? String(truck_id).trim() : randomUUID();
+    // ใช้วิธีแบบ Attendance
+    const id = await genTruckId();
 
     const created = await prisma.truck.create({
       data: {
-        id,
+        id,                         // <-- TRK-00x ที่เพิ่ง gen
         plate,
         model: model ?? null,
-        // ยอมรับค่าที่ส่งมาได้ แต่ตอน list จะไม่ใช้ฟิลด์นี้แล้ว
         total_distance: Number(total_distance || 0),
         fuel_efficiency_km_per_liter:
           fuel_efficiency_km_per_liter == null ? null : Number(fuel_efficiency_km_per_liter),

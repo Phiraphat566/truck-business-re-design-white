@@ -1,4 +1,3 @@
-// backend/routes/attendanceRoutes.js
 import express from 'express';
 import {
   getAllAttendance,
@@ -10,28 +9,27 @@ import {
   getMonthSummary,
   getEmployeeHistory,
   checkOutByEmployeeAndDate,
-
+  getByEmployeeAndDate,
+  findOneByEmpAndDate
 } from '../controllers/attendanceController.js';
 
 const router = express.Router();
 
-// ---------- รายงาน/สรุป ต้องมาก่อน route ที่มี :id ----------
+// ----- รายงาน/สรุป (มาก่อนเสมอ) -----
 router.get('/years', getYears);
 router.get('/summary', getMonthSummary);
 router.get('/employee-history', getEmployeeHistory);
 
-// ---------- CRUD ----------
+// ----- endpoint เฉพาะเจาะจง (ต้องมาก่อน /:id) -----
+router.post('/check-out', checkOutByEmployeeAndDate);
+router.get('/find-one', findOneByEmpAndDate);         // << ย้ายขึ้นมา
+router.get('/by-employee-date', getByEmployeeAndDate); // << ย้ายขึ้นมา
+
+// ----- CRUD -----
 router.get('/', getAllAttendance);
 router.post('/', createAttendance);
-router.get('/:id', getAttendanceById);
 router.put('/:id', updateAttendance);
 router.delete('/:id', deleteAttendance);
-
-// ---------- check-out by employeeId and date (query param) ----------
-router.post('/check-out', checkOutByEmployeeAndDate);
-
-
-
-
+router.get('/:id', getAttendanceById); // << ไว้ล่างสุดของ GET
 
 export default router;

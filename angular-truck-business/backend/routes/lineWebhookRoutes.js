@@ -1,7 +1,7 @@
 // backend/routes/lineWebhookRoutes.js
 import express from 'express';
 import crypto from 'crypto';
-import fetch from 'node-fetch'; // ถ้าใช้ Node 18+ ที่มี global fetch แล้ว จะถอดก็ได้
+import fetch from 'node-fetch';
 import { PrismaClient } from '@prisma/client';
 
 const router = express.Router();
@@ -10,7 +10,7 @@ const prisma = new PrismaClient();
 const CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || '';
 const CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET || '';
 
-/* ---------- utils ---------- */
+/* ---------- helpers ---------- */
 function verifyLineSignature(req, res, next) {
   try {
     const signature = req.get('x-line-signature') || '';
@@ -39,17 +39,18 @@ async function replyMessage(replyToken, messages) {
   }
 }
 
-function startOfDay(d = new Date()) {
+// ช่วงวันนี้ (ตามเวลาเครื่อง)
+function startOfDayLocal(d = new Date()) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
 }
-function endOfDay(d = new Date()) {
+function endOfDayLocal(d = new Date()) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
 }
-function dateOnly(d = new Date()) {
+function dateOnlyLocal(d = new Date()) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
 }
 
-/* ---------- health (ให้กด Verify ได้ 200) ---------- */
+/* ---------- health ---------- */
 router.get('/', (_req, res) => res.status(200).send('LINE webhook OK'));
 
 /* ---------- webhook ---------- */
@@ -64,27 +65,22 @@ router.post('/', verifyLineSignature, async (req, res) => {
       const raw = (ev.message.text || '').trim();
       console.log('[LINE] text:', raw);
 
-      /* === มุกเอ็มบัปเป้ (เช็คก่อนอย่างอื่น) === 
-      const MBAPPE_RE = /(บองชู้กำมอง|บองชู้|ตะเลวู้|ว่าไงคับผมเอ็มบัปเป้)/i;
-      if (MBAPPE_RE.test(raw)) {
-        await replyMessage(ev.replyToken, [
-          { type: 'text', text: 'ว่าไงคับผมเอ็มบัปเป้' },
-        ]);
-        continue; // จบเคสนี้เลย
-      }*/
-
-      // รูปแบบ: "EMP001-รับงาน", "emp001 รับงาน", "emp001 รับงานนี้"
-      const m = raw.match(/(emp\d{3,})\s*[- ]?\s*รับงาน(?:นี้)?/i);
+      // รองรับ: "EMP001 รับงาน", "EMP001-รับงาน", "emp001 รับงานนี้"
+      const m = raw.match(/(emp\d{3,})\s*[-_ ]?\s*(รับงาน|accept)(?:นี้)?/i);
       if (!m) continue;
 
       const empId = m[1].toUpperCase();
-      const sod = startOfDay(new Date());
-      const eod = endOfDay(new Date());
+      const sod = startOfDayLocal();
+      const eod = endOfDayLocal();
 
-      // หา "งานของวันนี้" (อันล่าสุด)
+      // งานของ "วันนี้" ที่ยังไม่ complete (ล่าสุด)
       const job = await prisma.jobAssignment.findFirst({
-        where: { employee_id: empId, assigned_date: { gte: sod, lte: eod } },
-        orderBy: { assigned_date: 'desc' }, // ไม่มี created_at ในโมเดลนี้
+        where: {
+          employee_id: empId,
+          assigned_date: { gte: sod, lte: eod },
+          completed_at: null,
+        },
+        orderBy: [{ id: 'desc' }],
       });
 
       if (!job) {
@@ -94,39 +90,54 @@ router.post('/', verifyLineSignature, async (req, res) => {
         continue;
       }
 
-      // ตีตรารับงาน (ถ้ายัง)
-      if (!job.accepted_at) {
-        await prisma.jobAssignment.update({
-          where: { id: job.id },
-          data: { accepted_at: new Date() },
-        });
-      }
-
-      // อัปเดตสถานะวันนี้เป็น WORKING (หลีกเลี่ยง upsert -> ใช้ findUnique + update/create)
-      try {
-        const key = { employee_id_work_date: { employee_id: empId, work_date: dateOnly(new Date()) } };
-        const exists = await prisma.employeeDayStatus.findUnique({ where: key });
-        if (exists) {
-          await prisma.employeeDayStatus.update({
-            where: key,
-            data: { status: 'WORKING', source: 'MANUAL' }, // ใช้ค่าใน enum DaySource ที่มีจริง
+      // ถ้ารับไปแล้ว -> แจ้งว่าได้รับแล้ว (ไม่พยายาม create DayStatus ซ้ำ ให้แค่อัปเดต)
+      if (job.accepted_at) {
+        try {
+          await prisma.employeeDayStatus.updateMany({
+            where: { employee_id: empId, work_date: dateOnlyLocal() },
+            data: { status: 'WORKING', source: 'LINE' },
           });
-        } else {
-          await prisma.employeeDayStatus.create({
-            data: {
-              employee_id: empId,
-              work_date: dateOnly(new Date()),
-              status: 'WORKING',
-              source: 'MANUAL',
-            },
-          });
+        } catch (edsErr) {
+          console.error('[EDS] ensure working (already-accepted) failed:', edsErr);
         }
-      } catch (edsErr) {
-        // ไม่ให้ล้มจนไม่ได้ตอบ LINE
-        console.error('[EDS] write failed:', edsErr);
+
+        await replyMessage(ev.replyToken, [
+          { type: 'text', text: `${empId} ได้รับงานไปแล้ว กรุณาเคลียร์งานให้เสร็จหรือแจ้งหัวหน้า` },
+          { type: 'text', text: `วันนี้: งาน: ${job.job_description}` },
+        ]);
+        continue;
       }
 
-      // ตอบกลับพร้อมชื่อพนักงาน
+      // ยังไม่ได้รับ -> mark accept
+      const updated = await prisma.jobAssignment.update({
+        where: { id: job.id },
+        data: { accepted_at: new Date() },
+      });
+
+      // เซ็ต DayStatus = WORKING อย่างปลอดภัย:
+      // 1) อัปเดตก่อน
+      const upd = await prisma.employeeDayStatus.updateMany({
+        where: { employee_id: empId, work_date: dateOnlyLocal() },
+        data: { status: 'WORKING', source: 'LINE' },
+      });
+      // 2) ถ้าไม่มี record ให้สร้างแบบกันชนซ้ำ
+      if (upd.count === 0) {
+        try {
+          await prisma.employeeDayStatus.createMany({
+            data: [{
+              employee_id: empId,
+              work_date: dateOnlyLocal(),
+              status: 'WORKING',
+              source: 'LINE',
+            }],
+            skipDuplicates: true,
+          });
+        } catch (edsErr) {
+          console.error('[EDS] createMany failed (will ignore):', edsErr);
+        }
+      }
+
+      // ข้อความยืนยัน + ชื่อพนักงาน
       const emp = await prisma.employee.findUnique({
         where: { id: empId },
         select: { name: true },
@@ -134,17 +145,15 @@ router.post('/', verifyLineSignature, async (req, res) => {
       const label = emp?.name ? `${empId} (${emp.name})` : empId;
 
       await replyMessage(ev.replyToken, [
-        { type: 'text', text: `${label} ยืนยันการรับงานแล้ว` },
-        { type: 'text', text: `วันนี้: ${job.job_description}` },
+        { type: 'text', text: `${label} ยืนยันรับงานแล้ว ` },
+        { type: 'text', text: `วันนี้: งาน: ${updated.job_description}` },
       ]);
     }
 
-    // ต้องตอบ 200 เสมอให้ LINE ไม่รีเทรย์
     res.sendStatus(200);
   } catch (e) {
     console.error('Webhook error', e);
-    // ป้องกัน LINE รีเทรย์ถี่ ๆ
-    res.sendStatus(200);
+    res.sendStatus(200); // ให้ LINE ไม่รีทรายถี่ ๆ
   }
 });
 

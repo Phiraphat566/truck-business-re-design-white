@@ -2,6 +2,9 @@ import { Router } from 'express';
 import {
   listTruckDistanceLogs,
   createTruckDistanceLog,
+  updateDistanceLog,
+  deleteDistanceLog,
+  
 } from '../controllers/truckDistanceLogController.js';
 
 const router = Router();
@@ -18,5 +21,11 @@ router.get('/truck-distance-logs', listTruckDistanceLogs);
  * - controller จะบันทึกและคำนวณสรุป (total_distance & efficiency) ให้อัตโนมัติ
  */
 router.post('/truck-distance-logs', createTruckDistanceLog);
+
+
+router.post('/distance-logs', createTruckDistanceLog);
+router.put('/distance-logs/:id', updateDistanceLog);    // ทางเลือก A (PUT)
+router.patch('/distance-logs/:id', updateDistanceLog);  // เผื่อกรณีส่ง PATCH
+router.delete('/distance-logs/:id', deleteDistanceLog);
 
 export default router;

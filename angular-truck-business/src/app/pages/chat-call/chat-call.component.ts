@@ -1,8 +1,10 @@
+// frontend component: chat-call.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { JobAssignmentService } from '../../services/job-assignment.service';
 
 import { LineTaskService, LineTaskPayload } from '../../services/line-task.service';
 import { EmployeeCallService, EmployeeCall } from '../../services/employee-call.service';
@@ -10,6 +12,7 @@ import { EmployeeService, Employee } from '../../services/employee.service';
 
 type TimelineMsg = { role: 'me' | 'bot'; text: string; ts: string };
 type ViewMode = 'compose' | 'history';
+type Availability = Record<string, 'FREE'|'PENDING'|'IN_PROGRESS'>;
 
 @Component({
   standalone: true,
@@ -19,17 +22,17 @@ type ViewMode = 'compose' | 'history';
   imports: [CommonModule, FormsModule, HttpClientModule],
 })
 export class ChatCallComponent implements OnInit {
-  // ===== THEME =====
-  isDark = false;
-  toggleTheme() { this.isDark = !this.isDark; }
+
+  // ===== AVAILABILITY =====
+  avail: Availability = {};
 
   // ===== VIEW =====
   view: ViewMode = 'compose';
 
-  // ===== FORM =====
+  // ===== FORM (compose) =====
   form = { title: '', employeeId: '', date: '', time: '', where: '', note: '' };
 
-  // ===== EMPLOYEES =====
+  // ===== DATA =====
   employees: Employee[] = [];
 
   // ===== PREVIEW/SEND =====
@@ -44,32 +47,64 @@ export class ChatCallComponent implements OnInit {
   // ===== TIMELINE =====
   messages: TimelineMsg[] = [];
 
-  // ===== HISTORY (ทั้งหมด + แบ่งหน้า) =====
+  // ===== HISTORY + paging =====
   historyFilter = { employeeId: '', q: '' };
   calls: EmployeeCall[] = [];
   loadingCalls = false;
-
-  // pagination state (10/หน้า)
   page = 1;
   pageSize = 10;
   total = 0;
   totalPages = 1;
-  totalKnown = false;      // true ถ้า API คืน total
-  hasNext = false;         // ใช้ปิดปุ่ม "ถัดไป" เมื่อไม่รู้ total
+  totalKnown = false;
+  hasNext = false;
 
-  // แก้ไขแถว
-  editId: number | null = null;
-  editBuf: { employeeId: string; callDate: string; message: string } = { employeeId: '', callDate: '', message: '' };
+  // ===== EDIT MODAL STATE =====
+  showEditModal = false;
+  savingEdit = false;
+  editing: EmployeeCall | null = null;
+  editForm: { employeeId: string; callDate: string; message: string } = {
+    employeeId: '',
+    callDate: '',
+    message: '',
+  };
+
+  // ===== DELETE MODAL STATE =====
+  showDeleteModal = false;
+  deleting = false;
+  deletingTarget: EmployeeCall | null = null;
 
   constructor(
     private lineSvc: LineTaskService,
     private callSvc: EmployeeCallService,
-    private empSvc: EmployeeService
+    private empSvc: EmployeeService,
+    private jobSvc: JobAssignmentService
   ) {}
+
+  /** helper: YYYY-MM-DD (ตามเวลาเครื่องผู้ใช้/เบราว์เซอร์) */
+  private todayYMDLocal(): string {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
 
   async ngOnInit(): Promise<void> {
     this.add('bot', 'ขั้นตอน: กรอกฟอร์ม → “สร้างตัวอย่างด้านล่าง” → “ยืนยันส่งไป LINE”');
     try { this.employees = await firstValueFrom(this.empSvc.getAll()); } catch {}
+
+    // โหลดความพร้อมวันนี้ (ใช้วันที่ local ไม่ใช่ toISOString)
+    const today = this.todayYMDLocal();
+    try {
+      const rows: any = await firstValueFrom(this.jobSvc.byDate(today));
+      this.avail = {};
+      (rows || []).forEach((r: any) => this.avail[r.employee_id] = r.status);
+    } catch {}
+  }
+
+  isUnavailable(id: string) {
+    const s = this.avail[id];
+    return s === 'PENDING' || s === 'IN_PROGRESS';
   }
 
   /* ===== Compose ===== */
@@ -82,6 +117,12 @@ export class ChatCallComponent implements OnInit {
 
     if (!title.trim() || !date || !time || !where) {
       this.errorBanner = 'กรุณากรอกข้อมูลที่มี * ให้ครบ';
+      this.previewVisible = false;
+      this.canConfirm = false;
+      return;
+    }
+    if (employeeId && this.isUnavailable(employeeId)) {
+      this.errorBanner = 'พนักงานคนนี้มีงานค้าง/กำลังทำอยู่ ไม่สามารถสั่งงานซ้อนได้';
       this.previewVisible = false;
       this.canConfirm = false;
       return;
@@ -133,10 +174,10 @@ export class ChatCallComponent implements OnInit {
 
   onFilterChange() {
     this.page = 1;
-    this.loadHistory();
+       this.loadHistory();
   }
 
-  /* ===== Load history (ทั้งหมด) ===== */
+  /* ===== Load history ===== */
   async loadHistory() {
     this.loadingCalls = true;
     try {
@@ -145,7 +186,6 @@ export class ChatCallComponent implements OnInit {
         q: this.historyFilter.q || undefined,
         page: this.page,
         pageSize: this.pageSize,
-        // ไม่ส่ง from/to = ดึงทั้งหมด (ขึ้นกับ backend ของคุณ)
       }));
 
       this.calls = res?.items ?? [];
@@ -156,7 +196,6 @@ export class ChatCallComponent implements OnInit {
         this.totalPages = Math.max(1, Math.ceil(this.total / this.pageSize));
         this.hasNext = this.page < this.totalPages;
       } else {
-        // ถ้า API ไม่ได้คืน total มาก็ใช้ heuristic:
         this.totalKnown = false;
         this.totalPages = 1;
         this.hasNext = this.calls.length === this.pageSize;
@@ -181,34 +220,59 @@ export class ChatCallComponent implements OnInit {
     if (this.page > 1) { this.page--; this.loadHistory(); }
   }
 
-  /* ===== Row edit/delete ===== */
-  startEdit(c: EmployeeCall) {
-    this.editId = c.id;
-    this.editBuf = {
+  /* ===== Edit Modal ===== */
+  openEditModal(c: EmployeeCall) {
+    this.editing = c;
+    this.editForm = {
       employeeId: c.employee_id,
       callDate: (c.call_date || '').slice(0, 10),
-      message: c.message,
+      message: c.message ?? '',
     };
+    this.showEditModal = true;
   }
-  cancelEdit() {
-    this.editId = null;
-    this.editBuf = { employeeId: '', callDate: '', message: '' };
+  closeEditModal() {
+    this.showEditModal = false;
+    this.savingEdit = false;
+    this.editing = null;
   }
-  async saveEdit(c: EmployeeCall) {
-    if (!this.editId) return;
-    const body: any = {};
-    if (this.editBuf.employeeId) body.employeeId = this.editBuf.employeeId;
-    if (this.editBuf.callDate) body.callDate = this.editBuf.callDate;
-    body.message = this.editBuf.message ?? '';
-    const updated = await firstValueFrom(this.callSvc.update(this.editId, body));
-    const idx = this.calls.findIndex(x => x.id === c.id);
-    if (idx >= 0) this.calls[idx] = updated as EmployeeCall;
-    this.cancelEdit();
+  async saveEditModal() {
+    if (!this.editing) return;
+    this.savingEdit = true;
+    try {
+      const body: any = {
+        employeeId: this.editForm.employeeId || undefined,
+        callDate: this.editForm.callDate || undefined,
+        message: this.editForm.message ?? '',
+      };
+      const updated = await firstValueFrom(this.callSvc.update(this.editing.id, body));
+      const idx = this.calls.findIndex(x => x.id === this.editing!.id);
+      if (idx >= 0) this.calls[idx] = updated as EmployeeCall;
+      this.closeEditModal();
+    } catch {
+      this.savingEdit = false;
+    }
   }
-  async removeCall(c: EmployeeCall) {
-    if (!confirm('ลบรายการนี้ใช่หรือไม่?')) return;
-    await firstValueFrom(this.callSvc.delete(c.id));
-    this.calls = this.calls.filter(x => x.id !== c.id);
+
+  /* ===== Delete Modal ===== */
+  openDeleteModal(c: EmployeeCall) {
+    this.deletingTarget = c;
+    this.showDeleteModal = true;
+  }
+  closeDeleteModal() {
+    this.showDeleteModal = false;
+    this.deleting = false;
+    this.deletingTarget = null;
+  }
+  async confirmDelete() {
+    if (!this.deletingTarget) return;
+    this.deleting = true;
+    try {
+      await firstValueFrom(this.callSvc.delete(this.deletingTarget.id));
+      this.calls = this.calls.filter(x => x.id !== this.deletingTarget!.id);
+      this.closeDeleteModal();
+    } catch {
+      this.deleting = false;
+    }
   }
 
   /* ===== Utils ===== */

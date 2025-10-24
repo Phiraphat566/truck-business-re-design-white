@@ -299,13 +299,46 @@ export class IncomeComponent implements OnInit {
       description: doc.description ?? ''
     };
   }
-  confirmDelete(doc: IncomeDoc) {
-    if (!confirm(`ลบใบรับเงินเลขที่ ${doc.receiptNo} ?`)) return;
-    this.http.delete(`/api/incomes/${doc.id}`).subscribe({
-      next: () => { this.loadChartYear(this.selectedYear); this.loadIncomesForCurrentMonth(); },
-      error: (err) => { alert(err?.error?.message || 'ลบไม่สำเร็จ'); }
-    });
-  }
+confirmDelete(doc: IncomeDoc) {
+  this.openDeleteModal(doc);
+}
+// ===== Confirm Delete (รายรับ) =====
+deleteConfirmOpen = false;
+deleteTarget: IncomeDoc | null = null;
+
+openDeleteModal(doc: IncomeDoc) {
+  this.deleteTarget = doc;
+  this.deleteConfirmOpen = true;
+}
+
+closeDeleteModal() {
+  this.deleteConfirmOpen = false;
+  this.deleteTarget = null;
+}
+
+/** ลบรายการจริง ๆ จากโมดัล */
+confirmDeleteNow() {
+  if (!this.deleteTarget) return;
+  this.isLoading = true;
+
+  this.http.delete(`/api/incomes/${this.deleteTarget.id}`).subscribe({
+    next: () => {
+      // ตัดรายการออกจากตารางปัจจุบัน
+      this.incomesOfMonth = this.incomesOfMonth.filter(x => x.id !== this.deleteTarget!.id);
+      // รีโหลดยอดสรุปกราฟปี
+      this.loadChartYear(this.selectedYear);
+      this.isLoading = false;
+      this.closeDeleteModal();
+    },
+    error: (err) => {
+      this.apiError = err?.error?.message || 'ลบไม่สำเร็จ';
+      this.isLoading = false;
+      this.closeDeleteModal();
+    }
+  });
+}
+
+
   closeCreate() { this.showCreateModal = false; this.creating = false; this.createError = null; this.editingId = null; }
   submitCreate() {
     if (!this.newIncome.receiptNo || !this.newIncome.contractDate || this.newIncome.amount == null) {

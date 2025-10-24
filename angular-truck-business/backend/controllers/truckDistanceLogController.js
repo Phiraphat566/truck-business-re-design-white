@@ -89,3 +89,72 @@ export const createTruckDistanceLog = async (req, res) => {
     res.status(400).json({ message: 'Cannot create distance log' });
   }
 };
+
+// ===== helpers สำหรับแปลงค่าอย่างปลอดภัย =====
+const toNum = (v, def = 0) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : def;
+};
+const parseISO = (d) => {
+  if (d == null || d === '') return null;
+  const t = new Date(d);
+  return Number.isNaN(t.getTime()) ? null : t;
+};
+
+// ===== UPDATE: PUT/PATCH /api/distance-logs/:id =====
+export const updateDistanceLog = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const current = await prisma.truckDistanceLog.findUnique({ where: { id } });
+    if (!current) return res.status(404).json({ message: 'Distance log not found' });
+
+    const { truck_id, log_date, round_number, distance_km } = req.body;
+    const data = {};
+
+    if (truck_id !== undefined) data.truck_id = String(truck_id);
+
+    if (log_date !== undefined) {
+      const d = parseISO(log_date);
+      if (!d) return res.status(400).json({ message: 'log_date is invalid' });
+      data.log_date = d;
+    }
+
+    if (round_number !== undefined) data.round_number = toNum(round_number, 1);
+
+    if (distance_km !== undefined) {
+      const dist = toNum(distance_km, 0);
+      if (dist < 0) return res.status(400).json({ message: 'distance_km must be >= 0' });
+      data.distance_km = dist;
+    }
+
+    const updated = await prisma.truckDistanceLog.update({ where: { id }, data });
+    await recomputeTruckStats(updated.truck_id);
+
+    res.json({
+      ...updated,
+      distance_km: Number(updated.distance_km),
+    });
+  } catch (e) {
+    console.error('updateDistanceLog error:', e);
+    res.status(400).json({ message: 'Cannot update distance log' });
+  }
+};
+
+// ===== DELETE: DELETE /api/distance-logs/:id =====
+export const deleteDistanceLog = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const current = await prisma.truckDistanceLog.findUnique({ where: { id } });
+    if (!current) return res.status(404).json({ message: 'Distance log not found' });
+
+    await prisma.truckDistanceLog.delete({ where: { id } });
+    await recomputeTruckStats(current.truck_id);
+
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('deleteDistanceLog error:', e);
+    res.status(400).json({ message: 'Cannot delete distance log' });
+  }
+};
+
+

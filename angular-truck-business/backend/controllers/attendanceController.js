@@ -179,13 +179,7 @@ export async function getMonthSummary(req, res) {
   try {
     const year = Number(req.query.year);
     const month = Number(req.query.month); // 1..12
-    if (
-      !Number.isInteger(year) ||
-      year < 1970 ||
-      !Number.isInteger(month) ||
-      month < 1 ||
-      month > 12
-    ) {
+    if (!Number.isInteger(year) || year < 1970 || !Number.isInteger(month) || month < 1 || month > 12) {
       return res.status(400).json({ error: 'Invalid year or month' });
     }
 
@@ -202,142 +196,116 @@ export async function getMonthSummary(req, res) {
       const days = [];
       const daysInMonth = new Date(year, month, 0).getDate();
       for (let d = 1; d <= daysInMonth; d++) {
-        const dateStr = new Date(Date.UTC(year, month - 1, d))
-          .toISOString()
-          .slice(0, 10);
+        const dateStr = new Date(Date.UTC(year, month - 1, d)).toISOString().slice(0, 10);
         days.push({
           date: dateStr,
-          rows: employees.map((e) => ({
-            employee_id: e.id,
-            employee_name: e.name,
-          })),
+          rows: employees.map((e) => ({ employee_id: e.id, employee_name: e.name })),
         });
       }
       return days;
     };
 
-    // 2) อ่านจาก EmployeeDayStatus ก่อน
-    const eds = await prisma.employeeDayStatus.findMany({
-      where: { work_date: { gte: start, lt: end } },
-      select: { employee_id: true, work_date: true, status: true },
-    });
+    // 2) โหลดข้อมูลทั้ง 3 แหล่ง
+    const [edsRows, attRows, leaveRows] = await Promise.all([
+      prisma.employeeDayStatus.findMany({
+        where: { work_date: { gte: start, lt: end } },
+        select: { employee_id: true, work_date: true, status: true },
+      }),
+      prisma.attendance.findMany({
+        where: { work_date: { gte: start, lt: end } },
+        select: { employee_id: true, work_date: true, check_in: true, check_out: true, status: true }, // status: 'ON_TIME' | 'LATE'
+      }),
+      prisma.leaveRequest.findMany({
+        where: { leave_date: { gte: start, lt: end } },
+        select: { employee_id: true, leave_date: true, leave_type: true, reason: true },
+      }),
+    ]);
 
-    if (eds.length > 0) {
-      const byKey = new Map();
-      for (const r of eds) {
-        const ymd = ymdUTC(r.work_date);
-        byKey.set(empDayKey(r.employee_id, ymd), r.status);
-      }
+    // 3) ทำ map ไว้เข้าถึงเร็ว
+    const edsMap = new Map();   // emp@ymd -> EDS status
+    for (const r of edsRows) edsMap.set(empDayKey(r.employee_id, ymdUTC(r.work_date)), r.status);
 
-      const days = buildEmptyGrid();
-      let ontime = 0,
-        late = 0,
-        absent = 0;
+    const attMap = new Map();   // emp@ymd -> attendance row
+    for (const r of attRows) attMap.set(empDayKey(r.employee_id, ymdUTC(r.work_date)), r);
 
-      const toUi = (st) => {
-        if (st === 'WORKING' || st === 'OFF_DUTY') return 'ON_TIME';
-        if (st === 'ON_LEAVE') return 'LEAVE';
-        return 'ABSENT';
-      };
-
-      for (const day of days) {
-        for (const row of day.rows) {
-          const stRaw = byKey.get(empDayKey(row.employee_id, day.date));
-          if (!stRaw) continue;
-
-          row.status = toUi(stRaw);
-          if (row.status === 'LEAVE') row.note = 'ลา';
-
-          if (row.status === 'ON_TIME') ontime++;
-          else if (row.status === 'LATE') late++;
-          else absent++;
-        }
-      }
-
-      const total = ontime + late + absent || 1;
-      const pct = (n) => Math.round((n * 100) / total);
-
-      return res.json({
-        headStats: {
-          people: employees.length,
-          ontimePct: pct(ontime),
-          latePct: pct(late),
-          absentPct: pct(absent),
-        },
-        days,
-      });
+    const leaveMap = new Map(); // emp@ymd -> note
+    for (const r of leaveRows) {
+      const note = r.reason || r.leave_type || 'ลา';
+      leaveMap.set(empDayKey(r.employee_id, ymdUTC(r.leave_date)), note);
     }
 
-    // ---------- fallback: Attendance/Leave ----------
-    const attendance = await prisma.attendance.findMany({
-      where: { work_date: { gte: start, lt: end } },
-      select: {
-        employee_id: true,
-        work_date: true,
-        check_in: true,
-        check_out: true,
-        status: true,
-      },
-    });
-
-    const leaves = await prisma.leaveRequest.findMany({
-      where: { leave_date: { gte: start, lt: end } },
-      select: { employee_id: true, leave_date: true, leave_type: true, reason: true },
-    });
-
-    if (attendance.length === 0 && leaves.length === 0) {
-      return res.json({
-        headStats: {
-          people: employees.length,
-          ontimePct: 0,
-          latePct: 0,
-          absentPct: 0,
-        },
-        days: buildEmptyGrid(),
-      });
-    }
-
-    const attMap = new Map();
-    for (const r of attendance) {
-      const ymd = ymdUTC(r.work_date);
-      attMap.set(empDayKey(r.employee_id, ymd), r);
-    }
-
-    const leaveMap = new Map();
-    for (const r of leaves) {
-      const ymd = ymdUTC(r.leave_date);
-      leaveMap.set(
-        empDayKey(r.employee_id, ymd),
-        r.reason || r.leave_type || 'ลา'
-      );
-    }
-
+    // 4) เติมกริดด้วยกติกา "ใช้ EDS ถ้ามี, ถ้าไม่มีให้ fallback ไป Attendance/Leave"
     const days = buildEmptyGrid();
-    let ontime = 0,
-      late = 0,
-      absent = 0;
+    let ontime = 0, late = 0, absent = 0;
+
+    // ✅ NOT_CHECKED_IN -> undefined (ไม่มีข้อมูล), ไม่ใช่ ABSENT
+    const edsToUi = (st) => {
+      if (st === 'WORKING' || st === 'OFF_DUTY') return 'ON_TIME';
+      if (st === 'ON_LEAVE') return 'LEAVE';
+      if (st === 'ABSENT') return 'ABSENT';
+      return undefined; // NOT_CHECKED_IN or anything else -> no status
+    };
 
     for (const day of days) {
       for (const row of day.rows) {
         const key = empDayKey(row.employee_id, day.date);
-        const rec = attMap.get(key);
-        const lv = leaveMap.get(key);
 
-        if (rec) {
-          row.check_in = hhmmFromDB(rec.check_in);
-          row.check_out = rec.check_out ? hhmmFromDB(rec.check_out) : '-';
-          row.status = rec.status; // 'ON_TIME' | 'LATE'
+        // (1) มี EDS ก่อน
+       const eds = edsMap.get(key);
+if (eds) {
+  const ui = edsToUi(eds);
+  if (ui) {
+    // 👇 เพิ่มอ่าน attendance เพื่อดึง LATE / เวลา
+    const att = attMap.get(key);
+
+    if (ui === 'ON_TIME') {
+      // ถ้ามีแถว attendance และตั้ง LATE → แสดง LATE
+      if (att?.status === 'LATE') {
+        row.status = 'LATE';
+        row.check_in  = att.check_in  ? hhmmFromDB(att.check_in)  : undefined;
+        row.check_out = att.check_out ? hhmmFromDB(att.check_out) : '-';
+        late++;
+      } else {
+        row.status = 'ON_TIME';
+        if (att?.check_in) {
+          row.check_in  = hhmmFromDB(att.check_in);
+          row.check_out = att.check_out ? hhmmFromDB(att.check_out) : '-';
+        }
+        ontime++;
+      }
+    } else if (ui === 'LEAVE') {
+      row.status = 'LEAVE';
+      row.note = leaveMap.get(key) || 'ลา';
+      absent++;
+    } else if (ui === 'ABSENT') {
+      row.status = 'ABSENT';
+      absent++;
+    }
+    continue;
+  }
+}
+
+        // (2) ไม่มี EDS -> ใช้ Attendance/Leave
+        const att = attMap.get(key);
+        if (att) {
+          row.check_in = hhmmFromDB(att.check_in);
+          row.check_out = att.check_out ? hhmmFromDB(att.check_out) : '-';
+          row.status = att.status; // 'ON_TIME' | 'LATE'
           row.note = '';
-          row.status === 'ON_TIME' ? ontime++ : late++;
-        } else if (lv) {
+          if (row.status === 'ON_TIME') ontime++; else late++;
+          continue;
+        }
+
+        const lv = leaveMap.get(key);
+        if (lv) {
           row.status = 'LEAVE';
           row.note = lv;
           absent++;
-        } else {
-          row.status = 'ABSENT';
-          row.note = '';
-          absent++;
+          continue;
         }
+
+        // (3) ไม่มีข้อมูลอะไรเลย -> ไม่ใส่สถานะ (เว้นว่างให้ UI แสดง "ยังไม่มีข้อมูล")
+        // ไม่เพิ่ม absent
       }
     }
 
@@ -359,11 +327,12 @@ export async function getMonthSummary(req, res) {
   }
 }
 
+
 // GET /api/attendance/employee-history?empId=EMP001&year=2025&month=1
 export async function getEmployeeHistory(req, res) {
   try {
     const empId = String(req.query.empId || '');
-    const year = Number(req.query.year);
+    const year  = Number(req.query.year);
     const month = Number(req.query.month);
     if (!empId || !Number.isInteger(year) || !Number.isInteger(month)) {
       return res.status(400).json({ error: 'empId, year and month are required' });
@@ -377,102 +346,77 @@ export async function getEmployeeHistory(req, res) {
 
     const { start, end } = monthRangeUTC(year, month);
 
-    // 1) พยายามอ่านจาก EmployeeDayStatus ก่อน
-    const eds = await prisma.employeeDayStatus.findMany({
-      where: { employee_id: empId, work_date: { gte: start, lt: end } },
-      select: { work_date: true, status: true },
-    });
+    // โหลด EDS / Attendance / Leave ของคนนี้ในเดือนนั้น
+    const [eds, att, leaves] = await Promise.all([
+      prisma.employeeDayStatus.findMany({
+        where: { employee_id: empId, work_date: { gte: start, lt: end } },
+        select: { work_date: true, status: true },
+      }),
+      prisma.attendance.findMany({
+        where: { employee_id: empId, work_date: { gte: start, lt: end } },
+        select: { work_date: true, check_in: true, status: true },
+      }),
+      prisma.leaveRequest.findMany({
+        where: { employee_id: empId, leave_date: { gte: start, lt: end } },
+        select: { leave_date: true, leave_type: true, reason: true },
+      }),
+    ]);
 
-    if (eds.length > 0) {
-      const dayStatus = new Map();
-      for (const r of eds) {
-        const d = new Date(r.work_date).getUTCDate();
-        dayStatus.set(d, r.status);
-      }
+    const edsByDay   = new Map(eds.map(r   => [new Date(r.work_date).getUTCDate(), r.status]));
+    const attByDay   = new Map(att.map(r   => [new Date(r.work_date).getUTCDate(), r]));
+    const leaveByDay = new Map(leaves.map(r => [new Date(r.leave_date).getUTCDate(), (r.reason || r.leave_type || 'ลา')]));
 
-      // ดึงเวลาเข้าเฉพาะวันที่ทำงาน
-      const presentDays = [...dayStatus.entries()]
-        .filter(([, st]) => st === 'WORKING' || st === 'OFF_DUTY')
-        .map(([d]) => d);
-
-      let timeInByDay = new Map();
-      if (presentDays.length) {
-        const workDates = presentDays.map((d) =>
-          normalizeYMDToUTC(
-            `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-          )
-        );
-        const att = await prisma.attendance.findMany({
-          where: { employee_id: empId, work_date: { in: workDates } },
-          select: { work_date: true, check_in: true },
-        });
-        timeInByDay = new Map(
-          att.map((a) => [
-            new Date(a.work_date).getUTCDate(),
-            hhmmFromDB(a.check_in),
-          ])
-        );
-      }
-
-      // map เป็น UI-Status ที่แยก LEAVE
-      const toUiStatus = (st) => {
-        if (st === 'WORKING' || st === 'OFF_DUTY') return 'ON_TIME';
-        if (st === 'ON_LEAVE') return 'LEAVE';
-        return 'ABSENT';
-      };
-
-      const daysInMonth = new Date(year, month, 0).getDate();
-      const result = [];
-      for (let d = 1; d <= daysInMonth; d++) {
-        const stRaw = dayStatus.get(d);
-        if (!stRaw) {
-          result.push({ day: d });
-          continue;
-        }
-        const ui = toUiStatus(stRaw);
-        result.push({
-          day: d,
-          status: ui,
-          timeIn: ui === 'ON_TIME' ? timeInByDay.get(d) || undefined : undefined,
-        });
-      }
-
-      return res.json({ employee, days: result });
-    }
-
-    // 2) fallback: Attendance/Leave
-    const att = await prisma.attendance.findMany({
-      where: { employee_id: empId, work_date: { gte: start, lt: end } },
-      select: { work_date: true, check_in: true, status: true },
-    });
-
-    const leaves = await prisma.leaveRequest.findMany({
-      where: { employee_id: empId, leave_date: { gte: start, lt: end } },
-      select: { leave_date: true, leave_type: true, reason: true },
-    });
-
-    if (att.length === 0 && leaves.length === 0) {
-      return res.json({ employee, days: [] });
-    }
-
-    const byDay = new Map();
-    for (const r of att) {
-      const day = new Date(r.work_date).getUTCDate();
-      byDay.set(day, { status: r.status, timeIn: hhmmFromDB(r.check_in) });
-    }
-
-    const leaveDays = new Map();
-    for (const l of leaves) {
-      const day = new Date(l.leave_date).getUTCDate();
-      leaveDays.set(day, { status: 'LEAVE', note: l.reason || l.leave_type });
-    }
+    // Map EDS -> สถานะที่ UI ใช้
+    const edsToUi = (st) => {
+      if (st === 'WORKING' || st === 'OFF_DUTY') return 'ON_TIME';
+      if (st === 'ON_LEAVE') return 'LEAVE';
+      if (st === 'ABSENT' || st === 'NOT_CHECKED_IN') return 'ABSENT';
+      return undefined;
+    };
 
     const daysInMonth = new Date(year, month, 0).getDate();
     const result = [];
+
     for (let d = 1; d <= daysInMonth; d++) {
-      if (byDay.has(d)) result.push({ day: d, ...byDay.get(d) });
-      else if (leaveDays.has(d)) result.push({ day: d, ...leaveDays.get(d) });
-      else result.push({ day: d });
+      const edsSt = edsToUi(edsByDay.get(d));
+      if (edsSt) {
+        const a = attByDay.get(d);
+
+        if (edsSt === 'ON_TIME' && a?.status === 'LATE') {
+          // ✅ ถ้ามี attendance ระบุ LATE ให้ถือเป็น LATE
+          result.push({
+            day: d,
+            status: 'LATE',
+            timeIn: a?.check_in ? hhmmFromDB(a.check_in) : undefined,
+          });
+        } else if (edsSt === 'ON_TIME') {
+          result.push({
+            day: d,
+            status: 'ON_TIME',
+            timeIn: a?.check_in ? hhmmFromDB(a.check_in) : undefined,
+          });
+        } else if (edsSt === 'LEAVE') {
+          result.push({ day: d, status: 'LEAVE' });
+        } else { // ABSENT
+          result.push({ day: d, status: 'ABSENT' });
+        }
+        continue;
+      }
+
+      // ไม่มี EDS -> ใช้ Attendance/Leave
+      const a = attByDay.get(d);
+      if (a) {
+        result.push({ day: d, status: a.status, timeIn: hhmmFromDB(a.check_in) });
+        continue;
+      }
+
+      if (leaveByDay.has(d)) {
+        result.push({ day: d, status: 'LEAVE' });
+        continue;
+      }
+
+      // ไม่มีข้อมูลเลย -> ปล่อยว่าง (ให้ UI แสดง "ยังไม่มีข้อมูล")
+      result.push({ day: d });
     }
 
     return res.json({ employee, days: result });
@@ -481,6 +425,8 @@ export async function getEmployeeHistory(req, res) {
     res.status(500).json({ error: 'Failed to fetch employee history' });
   }
 }
+
+
 
 // POST /api/attendance/check-out
 export const checkOutByEmployeeAndDate = async (req, res) => {
@@ -614,3 +560,78 @@ export async function getDashboardAttendance(req, res) {
   }
 }
 
+// GET /api/attendance/by-employee-date?empId=EMP001&date=2025-08-01
+export async function getByEmployeeAndDate(req, res) {
+  try {
+    const empId = String(req.query.empId || '');
+    const date  = String(req.query.date || '');
+    if (!empId || !date) return res.status(400).json({ error: 'empId and date are required' });
+
+    const { normalizeYMDToUTC } = await import('../utils/date.js');
+    const wd = normalizeYMDToUTC(date);
+
+    const row = await prisma.attendance.findFirst({
+      where: { employee_id: empId, work_date: wd },
+      select: { id: true, check_in: true, check_out: true, status: true }
+    });
+    if (!row) return res.status(404).json(null);
+
+    res.json(row);
+  } catch (e) {
+    console.error('[getByEmployeeAndDate]', e);
+    res.status(500).json({ error: 'Failed' });
+  }
+}
+
+
+// GET /api/attendance/find-one?employeeId=EMP001&date=2025-08-01
+export const findOneByEmpAndDate = async (req, res) => {
+  try {
+    const emp = String(req.query.employeeId || '').trim();
+    const date = String(req.query.date || '');
+    if (!emp || !date) return res.status(400).json({ error: 'employeeId and date are required' });
+
+    const wd = normalizeYMDToUTC(date);
+    const next = new Date(wd); next.setUTCDate(next.getUTCDate() + 1);
+
+    const rec = await prisma.attendance.findFirst({
+      where: {
+        employee_id: emp,
+        work_date: { gte: wd, lt: next }
+      },
+      select: { id: true, employee_id: true, work_date: true, check_in: true, check_out: true, status: true },
+    });
+
+    if (!rec) return res.status(404).json({ error: 'not found' });
+
+    // เพิ่มฟิลด์ HH:mm ที่แปลงฝั่งเซิร์ฟเวอร์ (ใช้ util เดียวกับ summary)
+    const withHHMM = {
+      ...rec,
+      check_in_hhmm:  rec.check_in  ? hhmmFromDB(rec.check_in)   : null,
+      check_out_hhmm: rec.check_out ? hhmmFromDB(rec.check_out)  : null,
+    };
+    return res.json(withHHMM);
+  } catch (err) {
+    console.error('[findOneByEmpAndDate]', err);
+    return res.status(500).json({ error: 'Failed to find attendance' });
+  }
+};
+
+export async function getByEmpAndDate(req, res) {
+  try {
+    const empId = String(req.query.empId || '');
+    const date  = String(req.query.date || '');
+    if (!empId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ error: 'empId and date(YYYY-MM-DD) are required' });
+    }
+    const wd = normalizeYMDToUTC(date);
+    const rec = await prisma.attendance.findFirst({
+      where: { employee_id: empId, work_date: wd },
+    });
+    if (!rec) return res.status(404).json({ error: 'NOT_FOUND' });
+    return res.json(rec);
+  } catch (e) {
+    console.error('[getByEmpAndDate]', e);
+    return res.status(500).json({ error: 'Failed to fetch attendance by emp/date' });
+  }
+}

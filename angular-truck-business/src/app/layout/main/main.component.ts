@@ -29,13 +29,13 @@ export class MainComponent implements OnInit, OnDestroy {
 
   // 👇 เมนูอยู่ "ภายในคลาส" เท่านั้น
   menu: MenuItem[] = [
-    { label: 'General',            icon: 'grid',     path: '/general' },
-    { label: 'Time in / Time out', icon: 'clock',    path: '/time-in-out' },
-    { label: 'Employee',           icon: 'user',     path: '/employee' },
-    { label: 'Billing',            icon: 'coins',    path: '/billing' },
-    { label: 'Income',             icon: 'calendar', path: '/income' },
-    { label: 'Truck Detail',       icon: 'truck',    path: '/truck-detail' },
-    { label: 'Chat Call',          icon: 'phone',    path: '/chat-call' },
+    { label: 'แดชบอร์ด',            icon: 'grid',     path: '/general' },
+    { label: 'เวลาเข้างาน / ออกงาน', icon: 'clock',    path: '/time-in-out' },
+    { label: 'พนักงาน',           icon: 'user',     path: '/employee' },
+    { label: 'รายจ่าย',            icon: 'coins',    path: '/billing' },
+    { label: 'รายรับ',             icon: 'calendar', path: '/income' },
+    { label: 'รายละเอียดรถบรรทุก',       icon: 'truck',    path: '/truck-detail' },
+    { label: 'แชท',          icon: 'phone',    path: '/chat-call' },
   ];
 
   private sub?: Subscription;
