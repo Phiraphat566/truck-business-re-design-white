@@ -1,0 +1,9 @@
+# Ignore virtual environment folder
+.venv/
+
+# Ignore reports folder
+reports/
+
+# Ignore tests folder
+tests/
+
